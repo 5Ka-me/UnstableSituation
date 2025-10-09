@@ -1,0 +1,2 @@
+# Data Processor Service (Go)
+# This service will read messages from Kafka and persist them to the database
