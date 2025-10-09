@@ -1,2 +1,0 @@
-# Data Ingestor Service (Node.js)
-# This service will fetch data from the unstable API and push it to Kafka
