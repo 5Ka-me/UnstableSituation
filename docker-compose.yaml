@@ -48,6 +48,26 @@ services:
     networks:
       - microservices-network
 
+  # RabbitMQ message queue (for Data Ingestor)
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"  # Management UI
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # Database - PostgreSQL
   postgres:
     image: postgres:15-alpine
@@ -63,89 +83,75 @@ services:
     networks:
       - microservices-network
 
-  # Data Ingestor Service (Node.js)
+  # Data Ingestor Service (Go)
   data-ingestor:
     build:
-      context: ./data-ingestor-service
+      context: ./DataIngestor
       dockerfile: Dockerfile
     container_name: data-ingestor
     ports:
-      - "3001:3001"
+      - "8080:8080"
     environment:
-      - KAFKA_BROKER=kafka:9092
-      - WEAKAPP_API_URL=http://weakapp:8080
+      - CONFIG_PATH=/root/config.yaml
+    volumes:
+      - ./DataIngestor/config.yaml:/root/config.yaml:ro
     depends_on:
-      - kafka
+      - rabbitmq
       - weakapp
     networks:
       - microservices-network
-
-  # Data Processor Service (Go)
-  data-processor:
-    build:
-      context: ./data-processor-service
-      dockerfile: Dockerfile
-    container_name: data-processor
-    ports:
-      - "3002:3002"
-    environment:
-      - KAFKA_BROKER=kafka:9092
-      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/microservices_db
-    depends_on:
-      - kafka
-      - postgres
-    networks:
-      - microservices-network
+    restart: unless-stopped
 
   # GraphQL API Gateway (.NET)
   graphql-gateway:
     build:
-      context: ./graphql-api-gateway
-      dockerfile: Dockerfile
+      context: ./GraphQLGateway
+      dockerfile: GraphQLGateway/Dockerfile
     container_name: graphql-gateway
     ports:
-      - "5000:5000"
+      - "5000:8080"
     environment:
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/microservices_db
       - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
     depends_on:
       - postgres
     networks:
       - microservices-network
 
-  # Notification Service (Rust)
-  notification-service:
-    build:
-      context: ./notification-service
-      dockerfile: Dockerfile
-    container_name: notification-service
-    ports:
-      - "3003:3003"
-    environment:
-      - KAFKA_BROKER=kafka:9092
-      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/microservices_db
-    depends_on:
-      - kafka
-      - postgres
-    networks:
-      - microservices-network
+  # Notification Service (Rust) - DISABLED: No Dockerfile found
+  # notification-service:
+  #   build:
+  #     context: ./notification-service
+  #     dockerfile: Dockerfile
+  #   container_name: notification-service
+  #   ports:
+  #     - "3003:3003"
+  #   environment:
+  #     - KAFKA_BROKER=kafka:9092
+  #     - DATABASE_URL=postgres://postgres:postgres@postgres:5432/microservices_db
+  #   depends_on:
+  #     - kafka
+  #     - postgres
+  #   networks:
+  #     - microservices-network
 
-  # React Frontend
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: frontend
-    ports:
-      - "3000:3000"
-    environment:
-      - REACT_APP_GRAPHQL_URL=http://localhost:5000/graphql
-      - REACT_APP_WS_URL=ws://localhost:3003/ws
-    depends_on:
-      - graphql-gateway
-      - notification-service
-    networks:
-      - microservices-network
+  # React Frontend - DISABLED: No Dockerfile found
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #   container_name: frontend
+  #   ports:
+  #     - "3000:3000"
+  #   environment:
+  #     - REACT_APP_GRAPHQL_URL=http://localhost:5000/graphql
+  #     - REACT_APP_WS_URL=ws://localhost:3003/ws
+  #   depends_on:
+  #     - graphql-gateway
+  #     - notification-service
+  #   networks:
+  #     - microservices-network
 
   # Monitoring - Prometheus
   prometheus:
@@ -163,7 +169,7 @@ services:
     image: grafana/grafana:latest
     container_name: grafana
     ports:
-      - "3001:3000"
+      - "3004:3000"
     environment:
       - GF_SECURITY_ADMIN_PASSWORD=admin
     volumes:
@@ -174,6 +180,7 @@ services:
 volumes:
   postgres_data:
   grafana_data:
+  rabbitmq_data:
 
 networks:
   microservices-network:
