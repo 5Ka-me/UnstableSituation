@@ -1,0 +1,15 @@
+server:
+  port: "8080"
+  host: "0.0.0.0"
+
+api:
+  base_url: "http://weakapp-api:8080"
+  timeout: 30s
+  retry_count: 3
+
+rabbitmq:
+  url: "amqp://guest:guest@rabbitmq:5672/"
+  queue_name: "meter-data-queue"
+
+logging:
+  level: "info"
