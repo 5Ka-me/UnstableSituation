@@ -1,0 +1,17 @@
+rabbitmq:
+  connection_string: "amqp://guest:guest@rabbitmq:5672/%2f"
+  exchange_name: "meter-data-exchange"
+  queue_name: "meter-data-queue"
+  routing_key: "meter.data"
+
+database:
+  url: "postgres://postgres:postgres@postgres:5432/microservices_db"
+  max_connections: 10
+  min_connections: 1
+  acquire_timeout_seconds: 30
+
+processing:
+  batch_size: 100
+  processing_interval_ms: 1000
+  retry_attempts: 3
+  retry_delay_ms: 1000

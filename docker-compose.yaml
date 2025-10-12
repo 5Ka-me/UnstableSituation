@@ -22,32 +22,6 @@ services:
     networks:
       - microservices-network
 
-  # Message Queue - Kafka
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.4.0
-    container_name: zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    networks:
-      - microservices-network
-
-  kafka:
-    image: confluentinc/cp-kafka:7.4.0
-    container_name: kafka
-    depends_on:
-      - zookeeper
-    ports:
-      - "9092:9092"
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: 'true'
-    networks:
-      - microservices-network
-
   # RabbitMQ message queue (for Data Ingestor)
   rabbitmq:
     image: rabbitmq:3-management-alpine
@@ -102,6 +76,31 @@ services:
       - microservices-network
     restart: unless-stopped
 
+  # Data Processor Service (Rust)
+  data-processor:
+    build:
+      context: ./data-processor-service
+      dockerfile: Dockerfile
+    container_name: data-processor
+    ports:
+      - "8082:8082"
+    environment:
+      - RUST_LOG=info
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/microservices_db
+    volumes:
+      - ./data-processor-service/config.yaml:/app/config.yaml:ro
+    depends_on:
+      - postgres
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
   # GraphQL API Gateway (.NET)
   graphql-gateway:
     build:
@@ -116,6 +115,7 @@ services:
       - ASPNETCORE_URLS=http://+:8080
     depends_on:
       - postgres
+      - data-processor
     networks:
       - microservices-network
 
