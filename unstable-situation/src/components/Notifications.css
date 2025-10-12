@@ -1,0 +1,143 @@
+/* Notifications Styles */
+.notifications-card {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.notifications-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.notifications-header .ant-badge {
+  margin-left: 8px;
+}
+
+.notifications-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+}
+
+.notifications-loading p {
+  margin-top: 16px;
+  color: #8c8c8c;
+}
+
+.notification-item {
+  border-radius: 6px;
+  margin-bottom: 8px;
+  padding: 12px;
+  transition: all 0.3s ease;
+  border-left: 4px solid transparent;
+}
+
+.notification-item:hover {
+  background-color: #fafafa;
+}
+
+.notification-item.info {
+  border-left-color: #1890ff;
+}
+
+.notification-item.warning {
+  border-left-color: #faad14;
+}
+
+.notification-item.error {
+  border-left-color: #ff4d4f;
+}
+
+.notification-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  font-size: 14px;
+  font-weight: bold;
+}
+
+.notification-icon.info {
+  background-color: #e6f7ff;
+  color: #1890ff;
+}
+
+.notification-icon.warning {
+  background-color: #fffbe6;
+  color: #faad14;
+}
+
+.notification-icon.error {
+  background-color: #fff2f0;
+  color: #ff4d4f;
+}
+
+.notification-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.notification-message {
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+.notification-message.unread {
+  font-weight: 600;
+}
+
+.notification-message.read {
+  color: #8c8c8c;
+}
+
+.notification-time {
+  font-size: 12px;
+  color: #8c8c8c;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .notifications-header {
+    font-size: 16px;
+  }
+  
+  .notification-item {
+    padding: 8px;
+  }
+  
+  .notification-content {
+    gap: 2px;
+  }
+  
+  .notification-message {
+    font-size: 14px;
+  }
+  
+  .notification-time {
+    font-size: 11px;
+  }
+}
+
+/* Animation for new notifications */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.notification-item.new {
+  animation: slideIn 0.3s ease-out;
+}

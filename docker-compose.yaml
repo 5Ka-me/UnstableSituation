@@ -119,63 +119,49 @@ services:
     networks:
       - microservices-network
 
-  # Notification Service (Rust) - DISABLED: No Dockerfile found
-  # notification-service:
-  #   build:
-  #     context: ./notification-service
-  #     dockerfile: Dockerfile
-  #   container_name: notification-service
-  #   ports:
-  #     - "3003:3003"
-  #   environment:
-  #     - KAFKA_BROKER=kafka:9092
-  #     - DATABASE_URL=postgres://postgres:postgres@postgres:5432/microservices_db
-  #   depends_on:
-  #     - kafka
-  #     - postgres
-  #   networks:
-  #     - microservices-network
-
-  # React Frontend - DISABLED: No Dockerfile found
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #   container_name: frontend
-  #   ports:
-  #     - "3000:3000"
-  #   environment:
-  #     - REACT_APP_GRAPHQL_URL=http://localhost:5000/graphql
-  #     - REACT_APP_WS_URL=ws://localhost:3003/ws
-  #   depends_on:
-  #     - graphql-gateway
-  #     - notification-service
-  #   networks:
-  #     - microservices-network
+  # React Frontend
+  frontend:
+    build:
+      context: ./unstable-situation
+      dockerfile: Dockerfile
+    container_name: iot-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - graphql-gateway
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:80"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # Monitoring - Prometheus
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
-    networks:
-      - microservices-network
+  # prometheus:
+  #   image: prom/prometheus:latest
+  #   container_name: prometheus
+  #   ports:
+  #     - "9090:9090"
+  #   volumes:
+  #     - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+  #   networks:
+  #     - microservices-network
 
-  # Monitoring - Grafana
-  grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
-    ports:
-      - "3004:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    volumes:
-      - grafana_data:/var/lib/grafana
-    networks:
-      - microservices-network
+  # # Monitoring - Grafana
+  # grafana:
+  #   image: grafana/grafana:latest
+  #   container_name: grafana
+  #   ports:
+  #     - "3004:3000"
+  #   environment:
+  #     - GF_SECURITY_ADMIN_PASSWORD=admin
+  #   volumes:
+  #     - grafana_data:/var/lib/grafana
+  #   networks:
+  #     - microservices-network
 
 volumes:
   postgres_data:

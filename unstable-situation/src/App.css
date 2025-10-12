@@ -1,0 +1,171 @@
+/* App Styles */
+.App {
+  text-align: center;
+}
+
+.app-sider {
+  box-shadow: 2px 0 8px rgba(0, 0, 0, 0.1);
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 16px;
+}
+
+.logo-text {
+  margin-left: 8px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1890ff;
+}
+
+.app-menu {
+  border-right: none;
+}
+
+.app-header {
+  background: white;
+  padding: 0 24px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.collapse-btn {
+  font-size: 16px;
+}
+
+.app-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #262626;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.connection-status {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.status-indicator {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.status-indicator.connected {
+  background-color: #52c41a;
+}
+
+.status-indicator.disconnected {
+  background-color: #ff4d4f;
+}
+
+.status-text {
+  font-size: 14px;
+  color: #8c8c8c;
+}
+
+.notification-btn {
+  font-size: 16px;
+}
+
+.app-content {
+  background: #f5f5f5;
+  min-height: calc(100vh - 64px);
+}
+
+.notifications-drawer .ant-drawer-header {
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.notifications-drawer .ant-drawer-body {
+  padding: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 0 16px;
+  }
+  
+  .app-title {
+    font-size: 16px;
+  }
+  
+  .header-right {
+    gap: 8px;
+  }
+  
+  .connection-status {
+    display: none;
+  }
+  
+  .notifications-drawer {
+    width: 100% !important;
+  }
+}
+
+@media (max-width: 576px) {
+  .app-title {
+    display: none;
+  }
+  
+  .header-left {
+    gap: 8px;
+  }
+}
+
+/* Animation for status indicator */
+.status-indicator {
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
