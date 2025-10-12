@@ -45,15 +45,15 @@ type LoggingConfig struct {
 	Level string `yaml:"level"`
 }
 
-// WeatherData represents the structure of data from unstable API
-type WeatherData struct {
-	ID          int       `json:"id"`
-	Temperature float64   `json:"temperature"`
-	Humidity    float64   `json:"humidity"`
-	Pressure    float64   `json:"pressure"`
-	Location    string    `json:"location"`
-	Timestamp   time.Time `json:"timestamp"`
+// SensorData represents a single sensor reading
+type SensorData struct {
+	Type    string                 `json:"type"`
+	Name    string                 `json:"name"`
+	Payload map[string]interface{} `json:"payload"`
 }
+
+// WeatherData represents the structure of data from unstable API (array of sensor data)
+type WeatherData []SensorData
 
 // DataIngestor handles data ingestion from external API
 type DataIngestor struct {
@@ -116,10 +116,13 @@ func (di *DataIngestor) ConnectToRabbitMQ() error {
 
 // FetchDataFromAPI retrieves data from the unstable external API
 func (di *DataIngestor) FetchDataFromAPI(ctx context.Context) (*WeatherData, error) {
-	req, err := http.NewRequestWithContext(ctx, "GET", di.config.API.BaseURL+"/weather", nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", di.config.API.BaseURL+"/meters", nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %w", err)
 	}
+
+	// Add API key header
+	req.Header.Set("X-Api-Key", "supersecret")
 
 	resp, err := di.httpClient.Do(req)
 	if err != nil {
@@ -141,11 +144,6 @@ func (di *DataIngestor) FetchDataFromAPI(ctx context.Context) (*WeatherData, err
 		return nil, fmt.Errorf("failed to unmarshal response: %w", err)
 	}
 
-	// Set timestamp if not provided
-	if weatherData.Timestamp.IsZero() {
-		weatherData.Timestamp = time.Now()
-	}
-
 	return &weatherData, nil
 }
 
@@ -157,10 +155,10 @@ func (di *DataIngestor) PublishToQueue(data *WeatherData) error {
 	}
 
 	err = di.channel.Publish(
-		"",                        // exchange
+		"",                           // exchange
 		di.config.RabbitMQ.QueueName, // routing key
-		false,                     // mandatory
-		false,                     // immediate
+		false,                        // mandatory
+		false,                        // immediate
 		amqp.Publishing{
 			ContentType:  "application/json",
 			Body:         body,
@@ -172,9 +170,14 @@ func (di *DataIngestor) PublishToQueue(data *WeatherData) error {
 	}
 
 	di.logger.WithFields(logrus.Fields{
-		"id":         data.ID,
-		"location":   data.Location,
-		"temperature": data.Temperature,
+		"count": len(*data),
+		"types": func() []string {
+			types := make([]string, len(*data))
+			for i, sensor := range *data {
+				types[i] = sensor.Type
+			}
+			return types
+		}(),
 	}).Info("Data published to queue")
 
 	return nil
@@ -203,9 +206,14 @@ func (di *DataIngestor) StartIngestion(ctx context.Context) {
 			}
 
 			di.logger.WithFields(logrus.Fields{
-				"id":         data.ID,
-				"location":   data.Location,
-				"temperature": data.Temperature,
+				"count": len(*data),
+				"types": func() []string {
+					types := make([]string, len(*data))
+					for i, sensor := range *data {
+						types[i] = sensor.Type
+					}
+					return types
+				}(),
 			}).Info("Successfully processed data")
 		}
 	}
@@ -251,7 +259,7 @@ func setupRoutes(di *DataIngestor) *gin.Engine {
 	})
 
 	// Manual trigger endpoint
-	r.POST("/ingest", func(c *gin.Context) {
+	r.POST("/meters", func(c *gin.Context) {
 		ctx, cancel := context.WithTimeout(c.Request.Context(), 30*time.Second)
 		defer cancel()
 
