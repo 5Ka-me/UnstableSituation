@@ -19,6 +19,7 @@ public class SensorDbContext : DbContext
         // Configure SensorReading entity
         modelBuilder.Entity<SensorReading>(entity =>
         {
+            entity.ToTable("sensor_readings"); // Указываем правильное имя таблицы
             entity.HasKey(e => e.Id);
             entity.Property(e => e.Id).HasDefaultValueSql("uuid_generate_v4()");
             entity.Property(e => e.SensorType).HasMaxLength(100).IsRequired();
@@ -39,6 +40,7 @@ public class SensorDbContext : DbContext
         // Configure ProcessingStats entity
         modelBuilder.Entity<ProcessingStats>(entity =>
         {
+            entity.ToTable("processing_stats"); // Указываем правильное имя таблицы
             entity.HasKey(e => e.Id);
             entity.Property(e => e.ProcessedMessages).HasDefaultValue(0);
             entity.Property(e => e.FailedMessages).HasDefaultValue(0);
@@ -47,3 +49,4 @@ public class SensorDbContext : DbContext
         });
     }
 }
+

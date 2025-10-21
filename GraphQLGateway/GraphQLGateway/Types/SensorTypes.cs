@@ -40,3 +40,4 @@ public class SensorDataPointType
     public int CO2 { get; set; }
     public int Humidity { get; set; }
 }
+
