@@ -4,11 +4,19 @@ import { BellOutlined, CloseOutlined, CheckOutlined } from '@ant-design/icons';
 import { signalRService } from '../services/signalRService';
 import './Notifications.css';
 
-const Notifications = () => {
-  const [notifications, setNotifications] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [unreadCount, setUnreadCount] = useState(0);
+interface Notification {
+  id: string;
+  message: string;
+  type: 'info' | 'warning' | 'error';
+  timestamp: string;
+  read: boolean;
+}
+
+const Notifications: React.FC = () => {
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [unreadCount, setUnreadCount] = useState<number>(0);
 
   useEffect(() => {
     const initializeNotifications = async () => {
@@ -18,19 +26,25 @@ const Notifications = () => {
     initializeNotifications();
     
     // Subscribe to real-time notifications
-    const unsubscribe = signalRService.onNotification((notification) => {
+    // Only subscribe once - SignalR service will handle reconnection
+    const unsubscribe = signalRService.onNotification((notification: Notification) => {
+      console.log('Received notification:', notification);
       setNotifications(prev => [notification, ...prev]);
       setUnreadCount(prev => prev + 1);
     });
 
-    return unsubscribe;
+    return () => {
+      if (unsubscribe) {
+        unsubscribe();
+      }
+    };
   }, []);
 
-  const loadNotifications = async () => {
+  const loadNotifications = async (): Promise<void> => {
     try {
       setLoading(true);
       // Mock initial notifications
-      const mockNotifications = [
+      const mockNotifications: Notification[] = [
         {
           id: '1',
           message: 'System started successfully',
@@ -58,13 +72,13 @@ const Notifications = () => {
       setUnreadCount(mockNotifications.filter(n => !n.read).length);
       setError(null);
     } catch (err) {
-      setError('Failed to load notifications: ' + err.message);
+      setError('Failed to load notifications: ' + (err as Error).message);
     } finally {
       setLoading(false);
     }
   };
 
-  const markAsRead = (notificationId) => {
+  const markAsRead = (notificationId: string): void => {
     setNotifications(prev => 
       prev.map(notification => 
         notification.id === notificationId 
@@ -75,18 +89,18 @@ const Notifications = () => {
     setUnreadCount(prev => Math.max(0, prev - 1));
   };
 
-  const markAllAsRead = () => {
+  const markAllAsRead = (): void => {
     setNotifications(prev => 
       prev.map(notification => ({ ...notification, read: true }))
     );
     setUnreadCount(0);
   };
 
-  const removeNotification = (notificationId) => {
+  const removeNotification = (notificationId: string): void => {
     setNotifications(prev => prev.filter(n => n.id !== notificationId));
   };
 
-  const getNotificationIcon = (type) => {
+  const getNotificationIcon = (type: Notification['type']): React.ReactNode => {
     switch (type) {
       case 'error':
         return <span className="notification-icon error">⚠</span>;
@@ -98,7 +112,7 @@ const Notifications = () => {
     }
   };
 
-  const getNotificationClass = (type) => {
+  const getNotificationClass = (type: Notification['type']): string => {
     switch (type) {
       case 'error':
         return 'notification-item error';
