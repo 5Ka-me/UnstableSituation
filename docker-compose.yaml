@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # Unstable External API (already provided)
   weakapp:
@@ -13,12 +11,6 @@ services:
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:8080
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
     networks:
       - microservices-network
 
@@ -41,6 +33,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 30s
 
   # Database - PostgreSQL
   postgres:
@@ -56,25 +49,46 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - microservices-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d microservices_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
 
-  # Data Ingestor Service (Go)
+  # Data Ingestor Service (.NET 8)
   data-ingestor:
     build:
-      context: ./DataIngestor
+      context: ./data-ingestor
       dockerfile: Dockerfile
     container_name: data-ingestor
     ports:
       - "8080:8080"
     environment:
-      - CONFIG_PATH=/root/config.yaml
-    volumes:
-      - ./DataIngestor/config.yaml:/root/config.yaml:ro
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=http://+:8080
+      - Server__Host=0.0.0.0
+      - Server__Port=8080
+      - Api__BaseUrl=http://weakapp-api:8080
+      - Api__Timeout=00:00:30
+      - Api__RetryCount=3
+      - RabbitMQ__Url=amqp://guest:guest@rabbitmq:5672/
+      - RabbitMQ__QueueName=meter-data-queue
+      - Logging__Level=Information
     depends_on:
-      - rabbitmq
-      - weakapp
+      rabbitmq:
+        condition: service_healthy
+      weakapp:
+        condition: service_started
     networks:
       - microservices-network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   # Data Processor Service (Rust)
   data-processor:
@@ -82,24 +96,20 @@ services:
       context: ./data-processor-service
       dockerfile: Dockerfile
     container_name: data-processor
-    ports:
-      - "8082:8082"
     environment:
       - RUST_LOG=info
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/microservices_db
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/%2f
     volumes:
       - ./data-processor-service/config.yaml:/app/config.yaml:ro
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
     networks:
       - microservices-network
     restart: unless-stopped
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8082/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
 
   # GraphQL API Gateway (.NET)
   graphql-gateway:
@@ -108,16 +118,22 @@ services:
       dockerfile: GraphQLGateway/Dockerfile
     container_name: graphql-gateway
     ports:
-      - "5000:8080"
+      - "5284:8080"  # Map external port 5284 to internal port 8080
     environment:
-      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/microservices_db
+      - ConnectionStrings__DefaultConnection=Host=postgres;Port=5432;Database=microservices_db;Username=postgres;Password=postgres
       - ASPNETCORE_ENVIRONMENT=Production
       - ASPNETCORE_URLS=http://+:8080
     depends_on:
-      - postgres
-      - data-processor
+      postgres:
+        condition: service_healthy
     networks:
       - microservices-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/graphql"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   # React Frontend
   frontend:
@@ -128,7 +144,8 @@ services:
     ports:
       - "3000:80"
     depends_on:
-      - graphql-gateway
+      graphql-gateway:
+        condition: service_started
     networks:
       - microservices-network
     restart: unless-stopped
@@ -138,6 +155,19 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  # Database Management - Adminer
+  adminer:
+    image: adminer:4.8.1
+    container_name: adminer
+    ports:
+      - "8083:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - microservices-network
+    restart: unless-stopped
 
   # Monitoring - Prometheus
   # prometheus:
