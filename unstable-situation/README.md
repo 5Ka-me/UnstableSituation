@@ -125,13 +125,13 @@ Currently using mock data that simulates:
 
 ### GraphQL API
 The app is designed to integrate with a GraphQL API gateway:
-- Endpoint: `http://localhost:5000` (GraphQL Gateway)
+- Endpoint: `http://localhost:5284` (GraphQL Gateway)
 - Queries for sensor readings, metrics, and aggregated data
 - Real-time subscriptions for live updates
 
 ### SignalR Hub
 Real-time communication via SignalR:
-- Hub URL: `http://localhost:5000/notificationsHub`
+- Hub URL: `http://localhost:5284/notificationsHub`
 - Methods: `SendSensorUpdate`, `SendMetricsUpdate`, `SendNotification`
 
 ### Microservices Architecture

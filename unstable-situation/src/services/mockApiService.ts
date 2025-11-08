@@ -1,9 +1,29 @@
+import { SensorReading, SensorMetrics, AggregatedDataPoint } from '../types';
+
+interface MockSensorData {
+  type: string;
+  name: string;
+  payload: Record<string, any>;
+}
+
+interface MockApiServiceInterface {
+  testGraphQLConnection(): Promise<any>;
+  getSensorReadings(limit?: number, offset?: number): Promise<SensorReading[]>;
+  getMetrics(): Promise<SensorMetrics>;
+  getAggregatedData(timeRange?: string): Promise<AggregatedDataPoint[]>;
+}
+
 // Simplified Mock API service for sensor data
-class MockApiService {
+class MockApiService implements MockApiServiceInterface {
+  private baseUrl: string;
+  private graphqlEndpoint: string;
+  private mockData: MockSensorData[];
+
   constructor() {
     this.baseUrl = process.env.NODE_ENV === 'production' 
       ? 'http://graphql-gateway:8080'  // Docker internal network
-      : 'http://localhost:5000';       // Local development
+      : 'http://localhost:5284';       // Local development - correct GraphQL Gateway port
+    this.graphqlEndpoint = `${this.baseUrl}/graphql`;
     this.mockData = [
       {
         "type": "energy",
@@ -98,12 +118,39 @@ class MockApiService {
     ];
   }
 
+  // Test GraphQL connection
+  async testGraphQLConnection(): Promise<any> {
+    try {
+      const response = await fetch(this.graphqlEndpoint, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          query: '{ getSensorMetrics { totalReadings averageEnergy averageCO2 averageHumidity motionDetectedCount lastUpdated } }'
+        })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        console.log('GraphQL connection successful:', data);
+        return data;
+      } else {
+        console.error('GraphQL connection failed:', response.status, response.statusText);
+        return null;
+      }
+    } catch (error) {
+      console.error('GraphQL connection error:', error);
+      return null;
+    }
+  }
+
   // Mock GraphQL query for sensor readings
-  async getSensorReadings(limit = 50, offset = 0) {
+  async getSensorReadings(limit: number = 50, offset: number = 0): Promise<SensorReading[]> {
     // Simulate API delay
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    const readings = this.mockData.map((data, index) => ({
+    const readings: SensorReading[] = this.mockData.map((data, index) => ({
       id: `reading-${index}`,
       sensorType: data.type,
       sensorName: data.name,
@@ -116,11 +163,11 @@ class MockApiService {
   }
 
   // Mock GraphQL query for metrics
-  async getMetrics() {
+  async getMetrics(): Promise<SensorMetrics> {
     await new Promise(resolve => setTimeout(resolve, 300));
     
-    const readingsByType = {};
-    const readingsByLocation = {};
+    const readingsByType: Record<string, number> = {};
+    const readingsByLocation: Record<string, number> = {};
     let totalEnergy = 0;
     let energyCount = 0;
     let totalCO2 = 0;
@@ -163,12 +210,12 @@ class MockApiService {
   }
 
   // Mock GraphQL query for aggregated data
-  async getAggregatedData(timeRange = '24h') {
+  async getAggregatedData(timeRange: string = '24h'): Promise<AggregatedDataPoint[]> {
     await new Promise(resolve => setTimeout(resolve, 400));
     
     // Generate mock time series data
     const now = new Date();
-    const dataPoints = [];
+    const dataPoints: AggregatedDataPoint[] = [];
     
     for (let i = 23; i >= 0; i--) {
       const timestamp = new Date(now.getTime() - i * 60 * 60 * 1000);
@@ -176,8 +223,9 @@ class MockApiService {
         timestamp: timestamp.toISOString(),
         energy: Math.random() * 1000 + 100,
         co2: Math.random() * 500 + 400,
+        pm25: Math.random() * 50 + 10,
         humidity: Math.random() * 50 + 30,
-        motionDetected: Math.random() > 0.7
+        motionDetected: Math.floor(Math.random() * 5),
       });
     }
     
