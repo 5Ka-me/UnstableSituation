@@ -73,7 +73,9 @@ services:
       - Api__Timeout=00:00:30
       - Api__RetryCount=3
       - RabbitMQ__Url=amqp://guest:guest@rabbitmq:5672/
+      - RabbitMQ__ExchangeName=meter-data-exchange
       - RabbitMQ__QueueName=meter-data-queue
+      - RabbitMQ__RoutingKey=meter.data
       - Logging__Level=Information
     depends_on:
       rabbitmq:
@@ -155,6 +157,36 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  # Notification Service (Node.js)
+  notification-service:
+    build:
+      context: ./notification-service
+      dockerfile: Dockerfile
+    container_name: notification-service
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672/
+      - RABBITMQ_EXCHANGE_NAME=meter-data-exchange
+      - RABBITMQ_QUEUE_NAME=meter-data-queue
+      - RABBITMQ_ROUTING_KEY=meter.data
+      - SIGNALR_URL=http://graphql-gateway:8080/notificationsHub
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      graphql-gateway:
+        condition: service_started
+    networks:
+      - microservices-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3001/health', (r) => {r.on('data', () => {}); r.on('end', () => process.exit(r.statusCode === 200 ? 0 : 1))})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
   # Database Management - Adminer
   adminer:
