@@ -39,7 +39,9 @@ public class ApiConfig
 public class RabbitMQConfig
 {
     public string Url { get; set; } = string.Empty;
-    public string QueueName { get; set; } = string.Empty;
+    public string ExchangeName { get; set; } = "meter-data-exchange";
+    public string QueueName { get; set; } = "meter-data-queue";
+    public string RoutingKey { get; set; } = "meter.data";
 }
 
 public class LoggingConfig

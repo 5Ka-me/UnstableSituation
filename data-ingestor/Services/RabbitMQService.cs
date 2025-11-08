@@ -32,14 +32,39 @@ public class RabbitMQService : IDisposable
             _connection = factory.CreateConnection();
             _channel = _connection.CreateModel();
 
-            _channel.QueueDeclare(
+            // Enable publisher confirms
+            _channel.ConfirmSelect();
+
+            // Declare exchange (Topic type, durable)
+            _channel.ExchangeDeclare(
+                exchange: _config.ExchangeName,
+                type: ExchangeType.Topic,
+                durable: true,
+                autoDelete: false,
+                arguments: null);
+
+            // Declare queue
+            var queueDeclareResult = _channel.QueueDeclare(
                 queue: _config.QueueName,
                 durable: true,
                 exclusive: false,
                 autoDelete: false,
                 arguments: null);
 
-            _logger.LogInformation("Connected to RabbitMQ successfully");
+            // Bind queue to exchange
+            _channel.QueueBind(
+                queue: _config.QueueName,
+                exchange: _config.ExchangeName,
+                routingKey: _config.RoutingKey,
+                arguments: null);
+
+            _logger.LogInformation(
+                "Connected to RabbitMQ successfully. Exchange: {Exchange}, Queue: {Queue} (Messages: {MessageCount}, Consumers: {ConsumerCount}), RoutingKey: {RoutingKey}", 
+                _config.ExchangeName, 
+                _config.QueueName,
+                queueDeclareResult.MessageCount,
+                queueDeclareResult.ConsumerCount,
+                _config.RoutingKey);
         }
         catch (Exception ex)
         {
@@ -57,7 +82,11 @@ public class RabbitMQService : IDisposable
 
         try
         {
-            var json = JsonSerializer.Serialize(data);
+            var json = JsonSerializer.Serialize(data, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                WriteIndented = false
+            });
             var body = Encoding.UTF8.GetBytes(json);
 
             var properties = _channel.CreateBasicProperties();
@@ -65,14 +94,22 @@ public class RabbitMQService : IDisposable
             properties.ContentType = "application/json";
 
             _channel.BasicPublish(
-                exchange: "",
-                routingKey: _config.QueueName,
+                exchange: _config.ExchangeName,
+                routingKey: _config.RoutingKey,
                 basicProperties: properties,
                 body: body);
 
+            // Wait for publisher confirmation
+            if (!_channel.WaitForConfirms(TimeSpan.FromSeconds(5)))
+            {
+                _logger.LogWarning("Publisher confirmation timeout for message");
+            }
+
             var types = data.Select(d => d.Type).ToList();
             _logger.LogInformation(
-                "Data published to queue. Count: {Count}, Types: {Types}",
+                "Data published to exchange '{Exchange}' with routing key '{RoutingKey}'. Count: {Count}, Types: {Types}",
+                _config.ExchangeName,
+                _config.RoutingKey,
                 data.Count,
                 string.Join(", ", types));
         }
