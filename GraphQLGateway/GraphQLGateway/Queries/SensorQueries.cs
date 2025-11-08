@@ -25,7 +25,7 @@ public class SensorQueries
                 Id = r.Id,
                 SensorType = r.SensorType,
                 SensorName = r.SensorName,
-                Payload = r.Payload,
+                Payload = JsonSerializer.Deserialize<JsonElement>(r.Payload),
                 Timestamp = r.Timestamp,
                 CreatedAt = r.CreatedAt
             }).ToList();
@@ -97,9 +97,9 @@ public class SensorQueries
                 averageCO2 = co2Values.Any() ? (int)co2Values.Average() : 0;
             }
 
-            // Calculate average humidity
+            // Calculate average humidity from air_quality readings
             var humidityReadings = await context.SensorReadings
-                .Where(r => r.SensorType == "humidity")
+                .Where(r => r.SensorType == "air_quality")
                 .ToListAsync();
 
             var averageHumidity = 0;
@@ -124,10 +124,31 @@ public class SensorQueries
                 averageHumidity = humidityValues.Any() ? (int)humidityValues.Average() : 0;
             }
 
-            // Count motion detections
-            var motionCount = await context.SensorReadings
+            // Count motion detections (where motionDetected or motion_detected is true)
+            var motionReadings = await context.SensorReadings
                 .Where(r => r.SensorType == "motion")
-                .CountAsync();
+                .ToListAsync();
+
+            var motionCount = 0;
+            foreach (var reading in motionReadings)
+            {
+                try
+                {
+                    var payload = JsonSerializer.Deserialize<Dictionary<string, object>>(reading.Payload);
+                    if (payload.ContainsKey("motionDetected") && payload["motionDetected"] is JsonElement motionElement && motionElement.GetBoolean())
+                    {
+                        motionCount++;
+                    }
+                    else if (payload.ContainsKey("motion_detected") && payload["motion_detected"] is JsonElement motionElement2 && motionElement2.GetBoolean())
+                    {
+                        motionCount++;
+                    }
+                }
+                catch
+                {
+                    // Skip invalid readings
+                }
+            }
 
             return new SensorMetricsType
             {
@@ -169,7 +190,7 @@ public class SensorQueries
                 Id = r.Id,
                 SensorType = r.SensorType,
                 SensorName = r.SensorName,
-                Payload = r.Payload,
+                Payload = JsonSerializer.Deserialize<JsonElement>(r.Payload),
                 Timestamp = r.Timestamp,
                 CreatedAt = r.CreatedAt
             }).ToList();
@@ -204,7 +225,7 @@ public class SensorQueries
                 Id = r.Id,
                 SensorType = r.SensorType,
                 SensorName = r.SensorName,
-                Payload = r.Payload,
+                Payload = JsonSerializer.Deserialize<JsonElement>(r.Payload),
                 Timestamp = r.Timestamp,
                 CreatedAt = r.CreatedAt
             }).ToList();
@@ -239,16 +260,36 @@ public class SensorQueries
 
             var aggregatedData = new List<SensorDataPointType>();
 
-            // Группируем по времени (например, по часам)
-            var groupedReadings = readings
-                .GroupBy(r => new DateTime(r.Timestamp.Year, r.Timestamp.Month, r.Timestamp.Day, r.Timestamp.Hour, 0, 0))
-                .OrderBy(g => g.Key);
+            // Группируем по времени в зависимости от временного диапазона
+            var groupedReadings = timeRange switch
+            {
+                "30s" or "1m" or "5m" => readings
+                    .GroupBy(r => new DateTime(r.Timestamp.Year, r.Timestamp.Month, r.Timestamp.Day, r.Timestamp.Hour, r.Timestamp.Minute, r.Timestamp.Second / 10 * 10))
+                    .OrderBy(g => g.Key),
+                "15m" or "30m" => readings
+                    .GroupBy(r => new DateTime(r.Timestamp.Year, r.Timestamp.Month, r.Timestamp.Day, r.Timestamp.Hour, r.Timestamp.Minute, 0))
+                    .OrderBy(g => g.Key),
+                "1h" or "6h" => readings
+                    .GroupBy(r => new DateTime(r.Timestamp.Year, r.Timestamp.Month, r.Timestamp.Day, r.Timestamp.Hour, r.Timestamp.Minute / 5 * 5, 0))
+                    .OrderBy(g => g.Key),
+                "12h" or "24h" => readings
+                    .GroupBy(r => new DateTime(r.Timestamp.Year, r.Timestamp.Month, r.Timestamp.Day, r.Timestamp.Hour, 0, 0))
+                    .OrderBy(g => g.Key),
+                "7d" or "30d" => readings
+                    .GroupBy(r => new DateTime(r.Timestamp.Year, r.Timestamp.Month, r.Timestamp.Day, 0, 0, 0))
+                    .OrderBy(g => g.Key),
+                _ => readings
+                    .GroupBy(r => new DateTime(r.Timestamp.Year, r.Timestamp.Month, r.Timestamp.Day, r.Timestamp.Hour, 0, 0))
+                    .OrderBy(g => g.Key)
+            };
 
             foreach (var group in groupedReadings)
             {
                 var energyValues = new List<double>();
                 var co2Values = new List<int>();
+                var pm25Values = new List<int>();
                 var humidityValues = new List<int>();
+                var motionDetectedCount = 0;
 
                 foreach (var reading in group)
                 {
@@ -260,13 +301,31 @@ public class SensorQueries
                         {
                             energyValues.Add(energy);
                         }
-                        else if (reading.SensorType == "air_quality" && payload.ContainsKey("co2") && payload["co2"] is JsonElement co2Element && co2Element.TryGetInt32(out var co2))
+                        else if (reading.SensorType == "air_quality")
                         {
-                            co2Values.Add(co2);
+                            if (payload.ContainsKey("co2") && payload["co2"] is JsonElement co2Element && co2Element.TryGetInt32(out var co2))
+                            {
+                                co2Values.Add(co2);
+                            }
+                            if (payload.ContainsKey("pm25") && payload["pm25"] is JsonElement pm25Element && pm25Element.TryGetInt32(out var pm25))
+                            {
+                                pm25Values.Add(pm25);
+                            }
+                            if (payload.ContainsKey("humidity") && payload["humidity"] is JsonElement humidityElement && humidityElement.TryGetInt32(out var humidity))
+                            {
+                                humidityValues.Add(humidity);
+                            }
                         }
-                        else if (reading.SensorType == "humidity" && payload.ContainsKey("humidity") && payload["humidity"] is JsonElement humidityElement && humidityElement.TryGetInt32(out var humidity))
+                        else if (reading.SensorType == "motion")
                         {
-                            humidityValues.Add(humidity);
+                            if (payload.ContainsKey("motionDetected") && payload["motionDetected"] is JsonElement motionElement && motionElement.GetBoolean())
+                            {
+                                motionDetectedCount++;
+                            }
+                            else if (payload.ContainsKey("motion_detected") && payload["motion_detected"] is JsonElement motionElement2 && motionElement2.GetBoolean())
+                            {
+                                motionDetectedCount++;
+                            }
                         }
                     }
                     catch
@@ -280,7 +339,9 @@ public class SensorQueries
                     Timestamp = group.Key,
                     Energy = energyValues.Any() ? energyValues.Average() : 0,
                     CO2 = co2Values.Any() ? (int)co2Values.Average() : 0,
-                    Humidity = humidityValues.Any() ? (int)humidityValues.Average() : 0
+                    PM25 = pm25Values.Any() ? (int)pm25Values.Average() : 0,
+                    Humidity = humidityValues.Any() ? (int)humidityValues.Average() : 0,
+                    MotionDetected = motionDetectedCount
                 });
             }
 
@@ -337,7 +398,7 @@ public class SensorQueries
                 Id = reading.Id,
                 SensorType = reading.SensorType,
                 SensorName = reading.SensorName,
-                Payload = reading.Payload,
+                Payload = JsonSerializer.Deserialize<JsonElement>(reading.Payload),
                 Timestamp = reading.Timestamp,
                 CreatedAt = reading.CreatedAt
             };
