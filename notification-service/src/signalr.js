@@ -16,7 +16,6 @@ export async function connectToSignalR() {
       .configureLogging(signalR.LogLevel.Information)
       .build();
 
-    // Connection event handlers
     connection.onclose((error) => {
       console.log('SignalR connection closed:', error);
     });
@@ -29,7 +28,6 @@ export async function connectToSignalR() {
       console.log('SignalR reconnected:', connectionId);
     });
 
-    // Start connection
     await connection.start();
     console.log('Connected to SignalR Hub successfully');
 

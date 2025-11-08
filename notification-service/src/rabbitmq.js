@@ -15,22 +15,18 @@ export async function connectToRabbitMQ(messageHandler) {
     connection = await amqp.connect(rabbitMQUrl);
     channel = await connection.createChannel();
 
-    // Assert exchange
     await channel.assertExchange(exchangeName, 'topic', {
       durable: true
     });
 
-    // Assert queue
     await channel.assertQueue(queueName, {
       durable: true
     });
 
-    // Bind queue to exchange
     await channel.bindQueue(queueName, exchangeName, routingKey);
 
     console.log(`Connected to RabbitMQ. Exchange: ${exchangeName}, Queue: ${queueName}, RoutingKey: ${routingKey}`);
 
-    // Consume messages
     await channel.consume(queueName, async (msg) => {
       if (msg !== null) {
         try {
@@ -38,14 +34,11 @@ export async function connectToRabbitMQ(messageHandler) {
           const count = Array.isArray(content) ? content.length : 1;
           console.log(`Received message from RabbitMQ: ${count} sensor reading(s)`);
 
-          // Pass the entire content (array or single object) to the handler
           await messageHandler(content);
 
-          // Acknowledge message
           channel.ack(msg);
         } catch (error) {
           console.error('Error processing RabbitMQ message:', error);
-          // Reject message and requeue
           channel.nack(msg, false, true);
         }
       }
@@ -55,7 +48,6 @@ export async function connectToRabbitMQ(messageHandler) {
 
     console.log('Waiting for messages from RabbitMQ...');
 
-    // Handle connection errors
     connection.on('error', (err) => {
       console.error('RabbitMQ connection error:', err);
     });

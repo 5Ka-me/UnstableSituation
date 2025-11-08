@@ -6,10 +6,8 @@ using GraphQLGateway.Hubs;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
 builder.Services.AddControllers();
 
-// Add CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -21,13 +19,11 @@ builder.Services.AddCors(options =>
     });
 });
 
-// Add Entity Framework
 var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
 
 builder.Services.AddDbContext<SensorDbContext>(options =>
     options.UseNpgsql(connectionString));
 
-// Add GraphQL
 builder.Services
     .AddGraphQLServer()
     .AddQueryType<SensorQueries>()
@@ -37,10 +33,8 @@ builder.Services
     .AddType<ProcessingStatsType>()
     .ModifyRequestOptions(opt => opt.IncludeExceptionDetails = true);
 
-// Add SignalR
 builder.Services.AddSignalR();
 
-// Add Swagger/OpenAPI
 builder.Services.AddSwaggerGen(c =>
 {
     c.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
@@ -54,7 +48,6 @@ builder.Services.AddSwaggerGen(c =>
         }
     });
     
-    // Include XML comments
     var xmlFile = $"{System.Reflection.Assembly.GetExecutingAssembly().GetName().Name}.xml";
     var xmlPath = System.IO.Path.Combine(System.AppContext.BaseDirectory, xmlFile);
     if (System.IO.File.Exists(xmlPath))
@@ -65,34 +58,28 @@ builder.Services.AddSwaggerGen(c =>
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI(c =>
     {
         c.SwaggerEndpoint("/swagger/v1/swagger.json", "GraphQL Gateway API v1");
-        c.RoutePrefix = "swagger"; // Swagger UI will be available at /swagger
+        c.RoutePrefix = "swagger";
     });
     app.UseHttpsRedirection();
 }
 
-// Use CORS
 app.UseCors("AllowFrontend");
 
 app.UseAuthorization();
 
 app.MapControllers();
 
-// Map GraphQL endpoint with Banana Cake Pop (GraphQL Playground)
-// Banana Cake Pop is available at /graphql in HotChocolate 14
-// Enable Banana Cake Pop even in Production
 app.MapGraphQL().WithOptions(new HotChocolate.AspNetCore.GraphQLServerOptions
 {
     Tool = { Enable = true }
 });
 
-// Map SignalR hub
 app.MapHub<NotificationsHub>("/notificationsHub");
 
 app.Run();

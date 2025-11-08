@@ -32,7 +32,6 @@ const Dashboard: React.FC = () => {
   const [isUpdating, setIsUpdating] = useState<boolean>(false);
   const [lastAggregatedDataTimestamp, setLastAggregatedDataTimestamp] = useState<string | null>(null);
 
-  // Initial data load effect
   useEffect(() => {
     let isMounted = true;
     
@@ -40,7 +39,6 @@ const Dashboard: React.FC = () => {
       try {
         setLoading(true);
         
-        // Test GraphQL connection first
         const graphqlTest = await graphqlApiService.testGraphQLConnection();
         if (graphqlTest) {
           console.log('GraphQL API is working!');
@@ -80,38 +78,21 @@ const Dashboard: React.FC = () => {
     };
   }, [selectedTimeRange, selectedLocation, selectedSensorType]);
 
-  // Separate effect for periodic updates (every 5 seconds)
-  // This ensures charts are refreshed with latest data while respecting current filters
   useEffect(() => {
     let isMounted = true;
     
     const updateData = async () => {
       try {
         setIsUpdating(true);
-        // Don't show loading spinner for background updates
         const [metricsData, readingsData, aggregatedData, processingData] = await Promise.all([
-          graphqlApiService.getMetrics(true), // Force refresh for background updates
-          graphqlApiService.getSensorReadings(20, 0, true), // Force refresh for background updates
-          graphqlApiService.getAggregatedData(selectedTimeRange, true), // Force refresh for background updates
-          graphqlApiService.getProcessingStats(true) // Force refresh for background updates
+          graphqlApiService.getMetrics(true),
+          graphqlApiService.getSensorReadings(20, 0, true),
+          graphqlApiService.getAggregatedData(selectedTimeRange, true),
+          graphqlApiService.getProcessingStats(true)
         ]);
         
         if (isMounted) {
           const latestTimestamp = aggregatedData?.[aggregatedData.length - 1]?.timestamp;
-          const dataChanged = latestTimestamp !== lastAggregatedDataTimestamp;
-          
-          // console.log('🔄 Background update completed:', {
-          //   metricsCount: metricsData?.totalReadings,
-          //   readingsCount: readingsData?.length,
-          //   aggregatedDataCount: aggregatedData?.length,
-          //   processingStats: processingData?.processedMessages,
-          //   timestamp: new Date().toLocaleTimeString(),
-          //   aggregatedDataSample: aggregatedData?.slice(0, 3), // Show first 3 data points
-          //   aggregatedDataLatest: aggregatedData?.[aggregatedData.length - 1], // Show latest data point
-          //   dataChanged: dataChanged,
-          //   previousTimestamp: lastAggregatedDataTimestamp,
-          //   currentTimestamp: latestTimestamp
-          // });
           
           setMetrics(metricsData);
           setSensorReadings(readingsData);
@@ -123,7 +104,6 @@ const Dashboard: React.FC = () => {
       } catch (err) {
         if (isMounted) {
           console.error('Background update failed:', err);
-          // Don't set error state for background updates to avoid disrupting user experience
         }
       } finally {
         if (isMounted) {
@@ -132,10 +112,8 @@ const Dashboard: React.FC = () => {
       }
     };
 
-    // Initial update immediately
     updateData();
 
-    // Set up interval for updates every 5 seconds
     const interval = setInterval(() => {
       if (isMounted) {
         updateData();
@@ -147,12 +125,12 @@ const Dashboard: React.FC = () => {
       clearInterval(interval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTimeRange]); // Include selectedTimeRange to update aggregated data with current filter
+  }, [selectedTimeRange]);
 
   const handleTimeRangeChange = async (range: TimeRange) => {
     setSelectedTimeRange(range);
     try {
-      const data = await graphqlApiService.getAggregatedData(range, true); // Force refresh when user changes filter
+      const data = await graphqlApiService.getAggregatedData(range, true);
       setAggregatedData(data);
     } catch (err) {
       setError('Failed to load aggregated data: ' + (err as Error).message);

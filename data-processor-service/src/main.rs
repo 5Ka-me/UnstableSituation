@@ -14,7 +14,6 @@ struct Args {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    // Initialize tracing
     tracing_subscriber::fmt()
         .with_env_filter(tracing_subscriber::EnvFilter::from_default_env())
         .init();
@@ -24,13 +23,11 @@ async fn main() -> Result<()> {
     info!("Starting Data Processor Service...");
     info!("Config file: {}", args.config);
     
-    // Load configuration
     let config = Config::load(&args.config)?;
     info!("Configuration loaded successfully");
     info!("RabbitMQ connection: {}", config.rabbitmq.connection_string);
     info!("Database URL: {}", config.database.url);
     
-    // Initialize data processor
     let mut processor = match DataProcessor::new(config).await {
         Ok(p) => {
             info!("Data processor initialized successfully");
@@ -42,7 +39,6 @@ async fn main() -> Result<()> {
         }
     };
     
-    // Start data processing
     info!("Starting data processing loop...");
     if let Err(e) = processor.start().await {
         error!("Data processor failed: {}", e);

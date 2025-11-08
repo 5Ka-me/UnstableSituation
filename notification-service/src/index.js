@@ -9,7 +9,6 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Health check endpoint
 app.get('/health', (req, res) => {
   res.json({ status: 'healthy', service: 'notification-service' });
 });
@@ -18,29 +17,22 @@ app.listen(PORT, () => {
   console.log(`Notification Service listening on port ${PORT}`);
 });
 
-// Initialize services
 async function initialize() {
   try {
     console.log('Initializing Notification Service...');
 
-    // Connect to SignalR Hub
     const signalRConnection = await connectToSignalR();
     if (!signalRConnection) {
       console.error('Failed to connect to SignalR Hub');
       process.exit(1);
     }
 
-    // Connect to RabbitMQ and start consuming messages
     await connectToRabbitMQ(async (sensorDataArray) => {
-      // sensorDataArray can be a single object or an array
       const sensorDataList = Array.isArray(sensorDataArray) ? sensorDataArray : [sensorDataArray];
       
-      // Process each sensor reading
       for (const sensorData of sensorDataList) {
-        // Analyze sensor data and generate notifications
         const notifications = analyzeSensorData(sensorData);
         
-        // Send notifications via SignalR
         for (const notification of notifications) {
           if (signalRConnection.state === 'Connected') {
             try {
@@ -63,10 +55,8 @@ async function initialize() {
   }
 }
 
-// Start the service
 initialize();
 
-// Graceful shutdown
 process.on('SIGTERM', () => {
   console.log('SIGTERM received, shutting down gracefully...');
   process.exit(0);

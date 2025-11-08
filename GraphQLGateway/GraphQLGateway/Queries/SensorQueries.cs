@@ -43,7 +43,6 @@ public class SensorQueries
         {
             var totalReadings = await context.SensorReadings.CountAsync();
 
-            // Calculate average energy
             var energyReadings = await context.SensorReadings
                 .Where(r => r.SensorType == "energy")
                 .ToListAsync();
@@ -64,13 +63,11 @@ public class SensorQueries
                     }
                     catch
                     {
-                        // Skip invalid readings
                     }
                 }
                 averageEnergy = energyValues.Any() ? energyValues.Average() : 0.0;
             }
 
-            // Calculate average CO2
             var co2Readings = await context.SensorReadings
                 .Where(r => r.SensorType == "air_quality")
                 .ToListAsync();
@@ -91,13 +88,10 @@ public class SensorQueries
                     }
                     catch
                     {
-                        // Skip invalid readings
                     }
                 }
                 averageCO2 = co2Values.Any() ? (int)co2Values.Average() : 0;
             }
-
-            // Calculate average humidity from air_quality readings
             var humidityReadings = await context.SensorReadings
                 .Where(r => r.SensorType == "air_quality")
                 .ToListAsync();
@@ -118,13 +112,11 @@ public class SensorQueries
                     }
                     catch
                     {
-                        // Skip invalid readings
                     }
                 }
                 averageHumidity = humidityValues.Any() ? (int)humidityValues.Average() : 0;
             }
 
-            // Count motion detections (where motionDetected or motion_detected is true)
             var motionReadings = await context.SensorReadings
                 .Where(r => r.SensorType == "motion")
                 .ToListAsync();
@@ -243,14 +235,13 @@ public class SensorQueries
     {
         try
         {
-            // Определяем временной диапазон
             DateTime fromTime = timeRange switch
             {
                 "1h" => DateTime.UtcNow.AddHours(-1),
                 "6h" => DateTime.UtcNow.AddHours(-6),
                 "12h" => DateTime.UtcNow.AddHours(-12),
                 "7d" => DateTime.UtcNow.AddDays(-7),
-                _ => DateTime.UtcNow.AddHours(-24) // по умолчанию 24h
+                _ => DateTime.UtcNow.AddHours(-24)
             };
 
             var readings = await context.SensorReadings
@@ -260,7 +251,6 @@ public class SensorQueries
 
             var aggregatedData = new List<SensorDataPointType>();
 
-            // Группируем по времени в зависимости от временного диапазона
             var groupedReadings = timeRange switch
             {
                 "30s" or "1m" or "5m" => readings
@@ -330,7 +320,6 @@ public class SensorQueries
                     }
                     catch
                     {
-                        // Skip invalid readings
                     }
                 }
 

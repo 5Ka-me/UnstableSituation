@@ -23,7 +23,6 @@ public class RabbitMQService : IDisposable
     {
         try
         {
-            // Use ConnectionFactory with URI - it handles amqp:// URLs correctly
             var factory = new ConnectionFactory
             {
                 Uri = new Uri(_config.Url)
@@ -32,10 +31,8 @@ public class RabbitMQService : IDisposable
             _connection = factory.CreateConnection();
             _channel = _connection.CreateModel();
 
-            // Enable publisher confirms
             _channel.ConfirmSelect();
 
-            // Declare exchange (Topic type, durable)
             _channel.ExchangeDeclare(
                 exchange: _config.ExchangeName,
                 type: ExchangeType.Topic,
@@ -43,7 +40,6 @@ public class RabbitMQService : IDisposable
                 autoDelete: false,
                 arguments: null);
 
-            // Declare queue
             var queueDeclareResult = _channel.QueueDeclare(
                 queue: _config.QueueName,
                 durable: true,
@@ -51,7 +47,6 @@ public class RabbitMQService : IDisposable
                 autoDelete: false,
                 arguments: null);
 
-            // Bind queue to exchange
             _channel.QueueBind(
                 queue: _config.QueueName,
                 exchange: _config.ExchangeName,
@@ -99,7 +94,6 @@ public class RabbitMQService : IDisposable
                 basicProperties: properties,
                 body: body);
 
-            // Wait for publisher confirmation
             if (!_channel.WaitForConfirms(TimeSpan.FromSeconds(5)))
             {
                 _logger.LogWarning("Publisher confirmation timeout for message");

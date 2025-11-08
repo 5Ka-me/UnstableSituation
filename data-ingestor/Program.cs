@@ -5,7 +5,6 @@ using Serilog.Events;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Configure Serilog from configuration
 var logLevel = builder.Configuration.GetValue<string>("Logging:Level") ?? "Information";
 var serilogLevel = Enum.TryParse<LogEventLevel>(logLevel, true, out var level)
     ? level
@@ -18,18 +17,15 @@ Log.Logger = new LoggerConfiguration()
 
 builder.Host.UseSerilog();
 
-// Add services
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-// Register configuration classes from IConfiguration
 builder.Services.Configure<ServerConfig>(builder.Configuration.GetSection("Server"));
 builder.Services.Configure<ApiConfig>(builder.Configuration.GetSection("Api"));
 builder.Services.Configure<RabbitMQConfig>(builder.Configuration.GetSection("RabbitMQ"));
 builder.Services.Configure<LoggingConfig>(builder.Configuration.GetSection("Logging"));
 
-// Register services
 builder.Services.AddSingleton<ApiClientService>(sp =>
 {
     var apiConfig = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ApiConfig>>().Value;
@@ -46,12 +42,10 @@ builder.Services.AddSingleton<RabbitMQService>(sp =>
     return service;
 });
 
-// Register background service
 builder.Services.AddHostedService<DataIngestionService>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
 }
@@ -61,7 +55,6 @@ app.UseSwaggerUI();
 app.UseAuthorization();
 app.MapControllers();
 
-// Configure server address from configuration
 var serverConfig = app.Configuration.GetSection("Server").Get<ServerConfig>() ?? new ServerConfig();
 var serverAddress = $"{serverConfig.Host}:{serverConfig.Port}";
 app.Urls.Add($"http://{serverAddress}");
