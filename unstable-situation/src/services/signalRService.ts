@@ -1,4 +1,3 @@
-// SignalR service for real-time updates
 import * as signalR from '@microsoft/signalr';
 
 interface SignalRConnectionStatus {
@@ -21,7 +20,7 @@ class SignalRService implements SignalRServiceInterface {
   private reconnectAttempts: number = 0;
   private readonly maxReconnectAttempts: number = 5;
   private readonly reconnectDelay: number = 2000;
-  private readonly hubUrl: string = 'http://localhost:5284/notificationsHub';  // GraphQL Gateway SignalR Hub
+  private readonly hubUrl: string = 'http://localhost:5284/notificationsHub';
 
   async connect(): Promise<boolean> {
     try {
@@ -32,10 +31,9 @@ class SignalRService implements SignalRServiceInterface {
           withCredentials: false
         })
         .withAutomaticReconnect([0, 2000, 10000, 30000])
-        .configureLogging(signalR.LogLevel.Information)
-        .build();
+      .configureLogging(signalR.LogLevel.Information)
+      .build();
 
-      // Set up event handlers
       this.connection.onclose((error?: Error) => {
         console.log('SignalR connection closed:', error);
         this.isConnected = false;
@@ -53,14 +51,11 @@ class SignalRService implements SignalRServiceInterface {
         this.reconnectAttempts = 0;
       });
 
-      // Set up event handlers for hub events
-      // SignalR converts method names to camelCase, so "ConnectionStatus" becomes "connectionStatus"
       this.connection.on('connectionStatus', (status: string) => {
         console.log('SignalR connection status:', status);
         this.isConnected = status === 'Connected';
       });
 
-      // Start connection
       await this.connection.start();
       this.isConnected = true;
       this.reconnectAttempts = 0;
@@ -86,17 +81,14 @@ class SignalRService implements SignalRServiceInterface {
     console.log('SignalR disconnected');
   }
 
-  // Subscribe to sensor data updates
   onSensorDataUpdate(callback: (data: any) => void): () => void {
     if (!this.isConnected || !this.connection) {
       console.warn('SignalR not connected. Cannot subscribe to updates.');
-      return () => {}; // Return empty function for cleanup
+      return () => {};
     }
 
-    // Set up SignalR event handler
     this.connection.on('SensorDataUpdate', callback);
 
-    // Return unsubscribe function
     return () => {
       if (this.connection) {
         this.connection.off('SensorDataUpdate', callback);
@@ -104,17 +96,14 @@ class SignalRService implements SignalRServiceInterface {
     };
   }
 
-  // Subscribe to metrics updates
   onMetricsUpdate(callback: (data: any) => void): () => void {
     if (!this.isConnected || !this.connection) {
       console.warn('SignalR not connected. Cannot subscribe to metrics updates.');
-      return () => {}; // Return empty function for cleanup
+      return () => {};
     }
 
-    // Set up SignalR event handler
     this.connection.on('MetricsUpdate', callback);
 
-    // Return unsubscribe function
     return () => {
       if (this.connection) {
         this.connection.off('MetricsUpdate', callback);
@@ -122,35 +111,25 @@ class SignalRService implements SignalRServiceInterface {
     };
   }
 
-  // Subscribe to system notifications
   onNotification(callback: (data: any) => void): () => void {
-    // Set up SignalR event handler
-    // SignalR converts method names to camelCase, so "Notification" becomes "notification"
     if (this.connection) {
-      // Remove any existing handler first to avoid duplicates
       this.connection.off('notification', callback);
-      // Add the handler
       this.connection.on('notification', callback);
       console.log('Subscribed to notification events');
     } else {
       console.warn('SignalR connection not available. Handler will be set up when connection is established.');
-      // Try to set up handler after connection is established
       const checkConnection = setInterval(() => {
         if (this.connection) {
-          // Remove any existing handler first to avoid duplicates
           this.connection.off('notification', callback);
-          // Add the handler
           this.connection.on('notification', callback);
           console.log('Subscribed to notification events (delayed)');
           clearInterval(checkConnection);
         }
       }, 500);
       
-      // Clear interval after 10 seconds
       setTimeout(() => clearInterval(checkConnection), 10000);
     }
 
-    // Return unsubscribe function
     return () => {
       if (this.connection) {
         this.connection.off('notification', callback);
@@ -191,7 +170,6 @@ class SignalRService implements SignalRServiceInterface {
     }
   }
 
-  // Get connection status
   getConnectionStatus(): SignalRConnectionStatus {
     return {
       isConnected: this.isConnected,

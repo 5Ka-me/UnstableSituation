@@ -25,8 +25,6 @@ const Notifications: React.FC = () => {
     
     initializeNotifications();
     
-    // Subscribe to real-time notifications
-    // Only subscribe once - SignalR service will handle reconnection
     const unsubscribe = signalRService.onNotification((notification: Notification) => {
       console.log('Received notification:', notification);
       setNotifications(prev => [notification, ...prev]);
@@ -43,7 +41,6 @@ const Notifications: React.FC = () => {
   const loadNotifications = async (): Promise<void> => {
     try {
       setLoading(true);
-      // Mock initial notifications
       const mockNotifications: Notification[] = [
         {
           id: '1',

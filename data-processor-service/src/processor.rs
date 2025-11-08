@@ -84,7 +84,7 @@ impl DataProcessor {
                 sensor_type: data.r#type,
                 sensor_name: data.name,
                 payload: data.payload,
-                timestamp: chrono::Utc::now(), // Use current timestamp since it's not provided in the JSON
+                timestamp: chrono::Utc::now(),
             };
             sensor_reading_inputs.push(input);
         }

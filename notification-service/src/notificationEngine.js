@@ -1,20 +1,14 @@
-// Notification thresholds
 const THRESHOLDS = {
-  CO2_WARNING: 800,      // ppm
-  CO2_CRITICAL: 1000,    // ppm
-  PM25_WARNING: 35,      // µg/m³
-  PM25_CRITICAL: 50,      // µg/m³
-  ENERGY_WARNING: 800,   // kWh
-  ENERGY_CRITICAL: 1000, // kWh
-  HUMIDITY_LOW: 30,      // %
-  HUMIDITY_HIGH: 70,     // %
+  CO2_WARNING: 800,
+  CO2_CRITICAL: 1000,
+  PM25_WARNING: 35,
+  PM25_CRITICAL: 50,
+  ENERGY_WARNING: 800,
+  ENERGY_CRITICAL: 1000,
+  HUMIDITY_LOW: 30,
+  HUMIDITY_HIGH: 70,
 };
 
-/**
- * Analyzes sensor data and generates notifications based on thresholds
- * @param {Object} sensorData - Sensor data object with type, name, and payload
- * @returns {Array} Array of notification objects
- */
 export function analyzeSensorData(sensorData) {
   const notifications = [];
 
@@ -45,13 +39,9 @@ export function analyzeSensorData(sensorData) {
   return notifications;
 }
 
-/**
- * Analyzes air quality sensor data
- */
 function analyzeAirQuality(sensorName, payload) {
   const notifications = [];
 
-  // Check CO2 levels
   if (payload.co2 !== undefined) {
     const co2 = Number(payload.co2);
     if (co2 >= THRESHOLDS.CO2_CRITICAL) {
@@ -67,7 +57,6 @@ function analyzeAirQuality(sensorName, payload) {
     }
   }
 
-  // Check PM2.5 levels
   if (payload.pm25 !== undefined) {
     const pm25 = Number(payload.pm25);
     if (pm25 >= THRESHOLDS.PM25_CRITICAL) {
@@ -83,7 +72,6 @@ function analyzeAirQuality(sensorName, payload) {
     }
   }
 
-  // Check humidity levels
   if (payload.humidity !== undefined) {
     const humidity = Number(payload.humidity);
     if (humidity < THRESHOLDS.HUMIDITY_LOW) {
@@ -102,9 +90,6 @@ function analyzeAirQuality(sensorName, payload) {
   return notifications;
 }
 
-/**
- * Analyzes energy consumption data
- */
 function analyzeEnergy(sensorName, payload) {
   const notifications = [];
 
@@ -126,13 +111,9 @@ function analyzeEnergy(sensorName, payload) {
   return notifications;
 }
 
-/**
- * Analyzes motion sensor data
- */
 function analyzeMotion(sensorName, payload) {
   const notifications = [];
 
-  // Check if motion is detected
   const motionDetected = payload.motionDetected === true || payload.motion_detected === true;
   
   if (motionDetected) {

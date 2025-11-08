@@ -1,9 +1,8 @@
-// GraphQL Types
 export interface SensorReading {
   id: string;
   sensorType: string;
   sensorName: string;
-  payload: Record<string, any>; // Now always an object, not a string
+  payload: Record<string, any>;
   timestamp: string;
   createdAt: string;
 }
@@ -38,7 +37,6 @@ export interface ProcessingStats {
   updatedAt: string;
 }
 
-// GraphQL Response Types
 export interface SensorMetricsResponse {
   sensorMetrics: SensorMetrics;
 }
@@ -67,7 +65,6 @@ export interface SensorReadingByIdResponse {
   sensorReadingById: SensorReading;
 }
 
-// Component Props Types
 export interface DashboardProps {}
 
 export interface MetricCardProps {
@@ -105,7 +102,6 @@ export interface SensorReadingsListProps {
   maxItems?: number;
 }
 
-// Service Types
 export interface GraphQLApiService {
   testGraphQLConnection(): Promise<SensorMetrics | null>;
   getMetrics(forceRefresh?: boolean): Promise<SensorMetrics>;
@@ -119,7 +115,6 @@ export interface GraphQLApiService {
   updateMetricsCache(newMetrics: SensorMetrics): void;
 }
 
-// Utility Types
 export type TimeRange = '30s' | '1m' | '5m' | '15m' | '30m' | '1h' | '6h' | '24h' | '7d' | '30d';
 
 export interface FilterOptions {
@@ -128,7 +123,6 @@ export interface FilterOptions {
   timeRange: TimeRange;
 }
 
-// Chart Data Types
 export interface ChartDataPoint {
   timestamp: string;
   energy?: number;

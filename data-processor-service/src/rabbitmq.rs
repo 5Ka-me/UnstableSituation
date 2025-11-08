@@ -40,7 +40,6 @@ impl RabbitMQConsumer {
             )
             .await?;
         
-        // Declare queue
         let _queue = channel
             .queue_declare(
                 &queue_name,
@@ -52,7 +51,6 @@ impl RabbitMQConsumer {
             )
             .await?;
         
-        // Bind queue to exchange
         channel
             .queue_bind(
                 &queue_name,
@@ -63,7 +61,6 @@ impl RabbitMQConsumer {
             )
             .await?;
         
-        // Create consumer
         let consumer = channel
             .basic_consume(
                 &queue_name,
@@ -94,12 +91,10 @@ impl RabbitMQConsumer {
                         Ok(sensor_data) => {
                             debug!("Received sensor data: {:?}", sensor_data);
                             
-                            // Process sensor data
                             if let Err(e) = handler(sensor_data).await {
                                 error!("Failed to process sensor data: {}", e);
                             }
                             
-                            // Acknowledge message
                             if let Err(e) = delivery.ack(BasicAckOptions::default()).await {
                                 error!("Failed to acknowledge message: {}", e);
                             }
@@ -107,7 +102,6 @@ impl RabbitMQConsumer {
                         Err(e) => {
                             error!("Failed to deserialize sensor data: {}", e);
                             
-                            // Reject message
                             if let Err(e) = delivery.reject(BasicRejectOptions::default()).await {
                                 error!("Failed to reject message: {}", e);
                             }
@@ -115,11 +109,9 @@ impl RabbitMQConsumer {
                     }
                 }
                 Ok(None) => {
-                    // No message received, continue
                     continue;
                 }
                 Err(_) => {
-                    // Timeout, continue polling
                     continue;
                 }
             }

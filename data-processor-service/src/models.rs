@@ -2,7 +2,6 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-// New data structures for the incoming JSON format
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SensorData {
     pub r#type: String,
@@ -10,13 +9,11 @@ pub struct SensorData {
     pub payload: serde_json::Value,
 }
 
-// Energy data structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EnergyPayload {
     pub energy: f64,
 }
 
-// Air quality data structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AirQualityPayload {
     pub co2: i32,
@@ -24,13 +21,11 @@ pub struct AirQualityPayload {
     pub humidity: i32,
 }
 
-// Motion data structure
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MotionPayload {
     pub motion_detected: bool,
 }
 
-// Database models
 #[derive(Debug, Clone, Serialize, Deserialize, sqlx::FromRow)]
 pub struct SensorReading {
     pub id: Uuid,
