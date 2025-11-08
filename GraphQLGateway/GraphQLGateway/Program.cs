@@ -34,7 +34,8 @@ builder.Services
     .AddType<SensorReadingType>()
     .AddType<SensorMetricsType>()
     .AddType<SensorDataPointType>()
-    .AddType<ProcessingStatsType>();
+    .AddType<ProcessingStatsType>()
+    .ModifyRequestOptions(opt => opt.IncludeExceptionDetails = true);
 
 // Add SignalR
 builder.Services.AddSignalR();
@@ -83,8 +84,13 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-// Map GraphQL endpoint
-app.MapGraphQL();
+// Map GraphQL endpoint with Banana Cake Pop (GraphQL Playground)
+// Banana Cake Pop is available at /graphql in HotChocolate 14
+// Enable Banana Cake Pop even in Production
+app.MapGraphQL().WithOptions(new HotChocolate.AspNetCore.GraphQLServerOptions
+{
+    Tool = { Enable = true }
+});
 
 // Map SignalR hub
 app.MapHub<NotificationsHub>("/notificationsHub");

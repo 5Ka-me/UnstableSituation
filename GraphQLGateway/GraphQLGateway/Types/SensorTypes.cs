@@ -1,3 +1,4 @@
+using System.Text.Json;
 using GraphQLGateway.Models;
 
 namespace GraphQLGateway.Types;
@@ -7,7 +8,10 @@ public class SensorReadingType
     public Guid Id { get; set; }
     public string SensorType { get; set; } = string.Empty;
     public string SensorName { get; set; } = string.Empty;
-    public string Payload { get; set; } = string.Empty;
+    
+    // Payload as JSON object (will be serialized from string)
+    public JsonElement Payload { get; set; }
+    
     public DateTime Timestamp { get; set; }
     public DateTime CreatedAt { get; set; }
 }
@@ -38,6 +42,8 @@ public class SensorDataPointType
     public DateTime Timestamp { get; set; }
     public double Energy { get; set; }
     public int CO2 { get; set; }
+    public int PM25 { get; set; }
     public int Humidity { get; set; }
+    public int MotionDetected { get; set; }
 }
 
