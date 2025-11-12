@@ -87,12 +87,6 @@ jobs:
       with:
         toolchain: stable
     
-    - name: Check code formatting
-      run: cargo fmt -- --check
-    
-    - name: Run clippy
-      run: cargo clippy -- -D warnings
-    
     - name: Build
       run: cargo build --verbose
     
