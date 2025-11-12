@@ -10,8 +10,10 @@ use tracing::{debug, error, info};
 use crate::models::SensorData;
 
 pub struct RabbitMQConsumer {
+    #[allow(dead_code)]
     connection: Connection,
     consumer: Consumer,
+    #[allow(dead_code)]
     queue_name: String,
 }
 
@@ -120,6 +122,7 @@ impl RabbitMQConsumer {
 }
 
 pub struct RabbitMQProducer {
+    #[allow(dead_code)]
     connection: Connection,
     channel: lapin::Channel,
     exchange_name: String,
