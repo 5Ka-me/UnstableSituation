@@ -60,7 +60,7 @@ services:
   data-ingestor:
     build:
       context: ./data-ingestor
-      dockerfile: Dockerfile
+      dockerfile: DataIngestor/Dockerfile
     container_name: data-ingestor
     ports:
       - "8080:8080"
