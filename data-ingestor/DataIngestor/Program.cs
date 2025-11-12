@@ -30,7 +30,15 @@ builder.Services.AddSingleton<IApiClientService>(sp =>
 {
     var apiConfig = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ApiConfig>>().Value;
     var logger = sp.GetRequiredService<ILogger<ApiClientService>>();
-    return new ApiClientService(apiConfig, logger);
+    
+    var httpPolicy = PollyPolicies.GetHttpPolicy(
+        apiConfig.RetryCount,
+        apiConfig.CircuitBreakerFailureThreshold,
+        apiConfig.GetCircuitBreakerDuration(),
+        apiConfig.GetTimeout(),
+        logger);
+    
+    return new ApiClientService(apiConfig, logger, httpPolicy);
 });
 
 builder.Services.AddSingleton<IRabbitMQService>(sp =>
