@@ -133,14 +133,11 @@ class MockApiService implements MockApiServiceInterface {
       
       if (response.ok) {
         const data = await response.json();
-        console.log('GraphQL connection successful:', data);
         return data;
       } else {
-        console.error('GraphQL connection failed:', response.status, response.statusText);
         return null;
       }
     } catch (error) {
-      console.error('GraphQL connection error:', error);
       return null;
     }
   }

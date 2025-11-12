@@ -9,8 +9,6 @@ export async function connectToRabbitMQ(messageHandler) {
     const exchangeName = process.env.RABBITMQ_EXCHANGE_NAME || 'meter-data-exchange';
     const queueName = process.env.RABBITMQ_QUEUE_NAME || 'meter-data-queue';
     const routingKey = process.env.RABBITMQ_ROUTING_KEY || 'meter.data';
-
-    console.log(`Connecting to RabbitMQ at ${rabbitMQUrl}...`);
     
     connection = await amqp.connect(rabbitMQUrl);
     channel = await connection.createChannel();
@@ -25,14 +23,10 @@ export async function connectToRabbitMQ(messageHandler) {
 
     await channel.bindQueue(queueName, exchangeName, routingKey);
 
-    console.log(`Connected to RabbitMQ. Exchange: ${exchangeName}, Queue: ${queueName}, RoutingKey: ${routingKey}`);
-
     await channel.consume(queueName, async (msg) => {
       if (msg !== null) {
         try {
           const content = JSON.parse(msg.content.toString());
-          const count = Array.isArray(content) ? content.length : 1;
-          console.log(`Received message from RabbitMQ: ${count} sensor reading(s)`);
 
           await messageHandler(content);
 
@@ -46,14 +40,12 @@ export async function connectToRabbitMQ(messageHandler) {
       noAck: false
     });
 
-    console.log('Waiting for messages from RabbitMQ...');
-
     connection.on('error', (err) => {
       console.error('RabbitMQ connection error:', err);
     });
 
     connection.on('close', () => {
-      console.log('RabbitMQ connection closed');
+      // Connection closed
     });
 
     return { connection, channel };

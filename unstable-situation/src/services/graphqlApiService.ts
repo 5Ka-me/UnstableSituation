@@ -35,10 +35,8 @@ class GraphQLApiServiceImpl implements GraphQLApiService {
         fetchPolicy: 'network-only'
       });
       
-      console.log('GraphQL connection successful:', result.data);
       return result.data.sensorMetrics;
     } catch (error) {
-      console.error('GraphQL connection failed:', error);
       return null;
     }
   }
@@ -55,7 +53,6 @@ class GraphQLApiServiceImpl implements GraphQLApiService {
       // console.log(`📊 Metrics fetched: ${result.data.sensorMetrics.totalReadings} total readings`);
       return result.data.sensorMetrics;
     } catch (error) {
-      console.error('Failed to fetch metrics:', error);
       throw error;
     }
   }
@@ -73,7 +70,6 @@ class GraphQLApiServiceImpl implements GraphQLApiService {
       // console.log(`📡 Sensor readings fetched: ${result.data.sensorReadings.length} readings`);
       return result.data.sensorReadings;
     } catch (error) {
-      console.error('Failed to fetch sensor readings:', error);
       throw error;
     }
   }
@@ -89,7 +85,6 @@ class GraphQLApiServiceImpl implements GraphQLApiService {
       
       return result.data.sensorReadingsByType;
     } catch (error) {
-      console.error('Failed to fetch sensor readings by type:', error);
       throw error;
     }
   }
@@ -105,7 +100,6 @@ class GraphQLApiServiceImpl implements GraphQLApiService {
       
       return result.data.sensorReadingsByLocation;
     } catch (error) {
-      console.error('Failed to fetch sensor readings by location:', error);
       throw error;
     }
   }
@@ -127,7 +121,6 @@ class GraphQLApiServiceImpl implements GraphQLApiService {
       
       return result.data.aggregatedData;
     } catch (error) {
-      console.error('Failed to fetch aggregated data:', error);
       throw error;
     }
   }
@@ -142,7 +135,6 @@ class GraphQLApiServiceImpl implements GraphQLApiService {
       
       return result.data.processingStats;
     } catch (error) {
-      console.error('Failed to fetch processing stats:', error);
       throw error;
     }
   }
@@ -158,7 +150,6 @@ class GraphQLApiServiceImpl implements GraphQLApiService {
       
       return result.data.sensorReadingById;
     } catch (error) {
-      console.error('Failed to fetch sensor reading by ID:', error);
       throw error;
     }
   }
@@ -189,7 +180,7 @@ class GraphQLApiServiceImpl implements GraphQLApiService {
         }
       });
     } catch (error) {
-      console.error('Failed to update cache:', error);
+      // Cache update failed
     }
   }
 
@@ -203,7 +194,7 @@ class GraphQLApiServiceImpl implements GraphQLApiService {
         }
       });
     } catch (error) {
-      console.error('Failed to update metrics cache:', error);
+      // Metrics cache update failed
     }
   }
 }

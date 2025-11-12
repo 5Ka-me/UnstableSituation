@@ -1,23 +1,30 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 
-// Mock amqplib
-jest.mock('amqplib', () => ({
+// For ESM modules Jest requires the unstable_mockModule API so the mock
+// is installed before the module under test is evaluated. We'll dynamically
+// import the module after configuring the mock inside beforeEach.
+const mockConnect = jest.fn();
+
+jest.unstable_mockModule('amqplib', () => ({
   __esModule: true,
   default: {
-    connect: jest.fn()
+    connect: mockConnect
   }
 }));
 
-import amqp from 'amqplib';
-import { connectToRabbitMQ, closeRabbitMQConnection } from '../rabbitmq.js';
+// We'll import the module under test dynamically in beforeEach so it picks up the mock
+let connectToRabbitMQ;
+let closeRabbitMQConnection;
 
 describe('RabbitMQ Module', () => {
   let mockConnection;
   let mockChannel;
-
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.clearAllMocks();
     
+    // Import module under test after mock is registered
+    ({ connectToRabbitMQ, closeRabbitMQConnection } = await import('../rabbitmq.js'));
+
     mockChannel = {
       assertExchange: jest.fn().mockResolvedValue({}),
       assertQueue: jest.fn().mockResolvedValue({}),
@@ -34,7 +41,7 @@ describe('RabbitMQ Module', () => {
       on: jest.fn()
     };
 
-    amqp.connect.mockResolvedValue(mockConnection);
+    mockConnect.mockResolvedValue(mockConnection);
   });
 
   describe('connectToRabbitMQ', () => {
@@ -43,7 +50,7 @@ describe('RabbitMQ Module', () => {
       
       await connectToRabbitMQ(messageHandler);
       
-      expect(amqp.connect).toHaveBeenCalledWith('amqp://guest:guest@localhost:5672/');
+      expect(mockConnect).toHaveBeenCalledWith('amqp://guest:guest@localhost:5672/');
       expect(mockConnection.createChannel).toHaveBeenCalled();
     });
 
@@ -55,7 +62,7 @@ describe('RabbitMQ Module', () => {
       
       await connectToRabbitMQ(messageHandler);
       
-      expect(amqp.connect).toHaveBeenCalledWith('amqp://test:test@localhost:5672/');
+      expect(mockConnect).toHaveBeenCalledWith('amqp://test:test@localhost:5672/');
       
       process.env.RABBITMQ_URL = originalUrl;
     });
@@ -201,7 +208,7 @@ describe('RabbitMQ Module', () => {
     });
 
     it('should throw error on connection failure', async () => {
-      amqp.connect.mockRejectedValue(new Error('Connection failed'));
+      mockConnect.mockRejectedValue(new Error('Connection failed'));
       
       const messageHandler = jest.fn().mockResolvedValue(undefined);
       
