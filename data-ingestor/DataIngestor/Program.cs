@@ -26,14 +26,14 @@ builder.Services.Configure<ApiConfig>(builder.Configuration.GetSection("Api"));
 builder.Services.Configure<RabbitMQConfig>(builder.Configuration.GetSection("RabbitMQ"));
 builder.Services.Configure<LoggingConfig>(builder.Configuration.GetSection("Logging"));
 
-builder.Services.AddSingleton<ApiClientService>(sp =>
+builder.Services.AddSingleton<IApiClientService>(sp =>
 {
     var apiConfig = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ApiConfig>>().Value;
     var logger = sp.GetRequiredService<ILogger<ApiClientService>>();
     return new ApiClientService(apiConfig, logger);
 });
 
-builder.Services.AddSingleton<RabbitMQService>(sp =>
+builder.Services.AddSingleton<IRabbitMQService>(sp =>
 {
     var rabbitMQConfig = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<RabbitMQConfig>>().Value;
     var logger = sp.GetRequiredService<ILogger<RabbitMQService>>();

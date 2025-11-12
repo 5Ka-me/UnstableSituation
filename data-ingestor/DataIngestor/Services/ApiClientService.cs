@@ -4,22 +4,41 @@ using DataIngestor.Models;
 
 namespace DataIngestor.Services;
 
-public class ApiClientService : IDisposable
+public class ApiClientService : IApiClientService
 {
     private readonly HttpClient _httpClient;
     private readonly ApiConfig _apiConfig;
     private readonly ILogger<ApiClientService> _logger;
+    private readonly bool _disposeHttpClient;
 
     public ApiClientService(ApiConfig apiConfig, ILogger<ApiClientService> logger)
+        : this(apiConfig, logger, null)
+    {
+    }
+
+    public ApiClientService(ApiConfig apiConfig, ILogger<ApiClientService> logger, HttpClient? httpClient)
     {
         _apiConfig = apiConfig;
         _logger = logger;
-        _httpClient = new HttpClient
-        {
-            Timeout = _apiConfig.GetTimeout()
-        };
         
-        _httpClient.DefaultRequestHeaders.Add("X-Api-Key", "supersecret");
+        if (httpClient != null)
+        {
+            _httpClient = httpClient;
+            _disposeHttpClient = false;
+        }
+        else
+        {
+            _httpClient = new HttpClient
+            {
+                Timeout = _apiConfig.GetTimeout()
+            };
+            _disposeHttpClient = true;
+        }
+        
+        if (!_httpClient.DefaultRequestHeaders.Contains("X-Api-Key"))
+        {
+            _httpClient.DefaultRequestHeaders.Add("X-Api-Key", "supersecret");
+        }
     }
 
     public async Task<List<SensorData>> FetchDataAsync(CancellationToken cancellationToken = default)
@@ -47,7 +66,10 @@ public class ApiClientService : IDisposable
 
     public void Dispose()
     {
-        _httpClient?.Dispose();
+        if (_disposeHttpClient)
+        {
+            _httpClient?.Dispose();
+        }
     }
 }
 

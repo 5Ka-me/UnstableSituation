@@ -8,13 +8,13 @@ namespace DataIngestor.Controllers;
 [Route("[controller]")]
 public class MetersController : ControllerBase
 {
-    private readonly ApiClientService _apiClient;
-    private readonly RabbitMQService _rabbitMQService;
+    private readonly IApiClientService _apiClient;
+    private readonly IRabbitMQService _rabbitMQService;
     private readonly ILogger<MetersController> _logger;
 
     public MetersController(
-        ApiClientService apiClient,
-        RabbitMQService rabbitMQService,
+        IApiClientService apiClient,
+        IRabbitMQService rabbitMQService,
         ILogger<MetersController> logger)
     {
         _apiClient = apiClient;

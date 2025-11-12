@@ -6,7 +6,7 @@ using RabbitMQ.Client;
 
 namespace DataIngestor.Services;
 
-public class RabbitMQService : IDisposable
+public class RabbitMQService : IRabbitMQService
 {
     private readonly RabbitMQConfig _config;
     private readonly ILogger<RabbitMQService> _logger;
