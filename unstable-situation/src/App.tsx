@@ -17,15 +17,12 @@ const App: React.FC = () => {
   useEffect(() => {
     const initializeSignalR = async () => {
       try {
-        console.log('Initializing SignalR connection...');
         const connected = await signalRService.connect();
-        if (connected) {
-          console.log('SignalR initialized successfully');
-        } else {
-          console.warn('SignalR connection failed, will retry automatically');
+        if (!connected) {
+          // Connection failed, will retry automatically
         }
       } catch (error) {
-        console.error('Error initializing SignalR:', error);
+        // Error during initialization
       }
     };
 

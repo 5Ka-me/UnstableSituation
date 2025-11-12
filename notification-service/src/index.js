@@ -19,8 +19,6 @@ app.listen(PORT, () => {
 
 async function initialize() {
   try {
-    console.log('Initializing Notification Service...');
-
     const signalRConnection = await connectToSignalR();
     if (!signalRConnection) {
       console.error('Failed to connect to SignalR Hub');
@@ -37,18 +35,15 @@ async function initialize() {
           if (signalRConnection.state === 'Connected') {
             try {
               await signalRConnection.invoke('SendNotification', notification.message, notification.type);
-              console.log(`Notification sent: ${notification.type} - ${notification.message}`);
             } catch (error) {
               console.error('Error sending notification via SignalR:', error);
             }
           } else {
-            console.warn('SignalR not connected, notification queued:', notification);
+            // SignalR not connected, notification skipped
           }
         }
       }
     });
-
-    console.log('Notification Service initialized successfully');
   } catch (error) {
     console.error('Failed to initialize Notification Service:', error);
     process.exit(1);

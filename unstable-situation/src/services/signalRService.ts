@@ -24,8 +24,6 @@ class SignalRService implements SignalRServiceInterface {
 
   async connect(): Promise<boolean> {
     try {
-      console.log('Connecting to SignalR hub...');
-      
       this.connection = new signalR.HubConnectionBuilder()
         .withUrl(this.hubUrl, {
           withCredentials: false
@@ -35,24 +33,20 @@ class SignalRService implements SignalRServiceInterface {
       .build();
 
       this.connection.onclose((error?: Error) => {
-        console.log('SignalR connection closed:', error);
         this.isConnected = false;
         this.handleReconnection();
       });
 
       this.connection.onreconnecting((error?: Error) => {
-        console.log('SignalR reconnecting:', error);
         this.isConnected = false;
       });
 
       this.connection.onreconnected((connectionId?: string) => {
-        console.log('SignalR reconnected:', connectionId);
         this.isConnected = true;
         this.reconnectAttempts = 0;
       });
 
       this.connection.on('connectionStatus', (status: string) => {
-        console.log('SignalR connection status:', status);
         this.isConnected = status === 'Connected';
       });
 
@@ -60,10 +54,8 @@ class SignalRService implements SignalRServiceInterface {
       this.isConnected = true;
       this.reconnectAttempts = 0;
       
-      console.log('SignalR connected successfully');
       return true;
     } catch (error) {
-      console.error('SignalR connection failed:', error);
       this.handleReconnection();
       return false;
     }
@@ -74,16 +66,14 @@ class SignalRService implements SignalRServiceInterface {
       try {
         await this.connection.stop();
       } catch (error) {
-        console.log('Error stopping connection:', error);
+        // Error stopping connection
       }
     }
     this.isConnected = false;
-    console.log('SignalR disconnected');
   }
 
   onSensorDataUpdate(callback: (data: any) => void): () => void {
     if (!this.isConnected || !this.connection) {
-      console.warn('SignalR not connected. Cannot subscribe to updates.');
       return () => {};
     }
 
@@ -98,7 +88,6 @@ class SignalRService implements SignalRServiceInterface {
 
   onMetricsUpdate(callback: (data: any) => void): () => void {
     if (!this.isConnected || !this.connection) {
-      console.warn('SignalR not connected. Cannot subscribe to metrics updates.');
       return () => {};
     }
 
@@ -115,14 +104,11 @@ class SignalRService implements SignalRServiceInterface {
     if (this.connection) {
       this.connection.off('notification', callback);
       this.connection.on('notification', callback);
-      console.log('Subscribed to notification events');
     } else {
-      console.warn('SignalR connection not available. Handler will be set up when connection is established.');
       const checkConnection = setInterval(() => {
         if (this.connection) {
           this.connection.off('notification', callback);
           this.connection.on('notification', callback);
-          console.log('Subscribed to notification events (delayed)');
           clearInterval(checkConnection);
         }
       }, 500);
@@ -160,13 +146,10 @@ class SignalRService implements SignalRServiceInterface {
   private handleReconnection(): void {
     if (this.reconnectAttempts < this.maxReconnectAttempts) {
       this.reconnectAttempts++;
-      console.log(`Attempting to reconnect... (${this.reconnectAttempts}/${this.maxReconnectAttempts})`);
       
       setTimeout(() => {
         this.connect();
       }, this.reconnectDelay * this.reconnectAttempts);
-    } else {
-      console.error('Max reconnection attempts reached. SignalR connection failed.');
     }
   }
 

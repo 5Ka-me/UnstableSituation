@@ -40,10 +40,8 @@ const Dashboard: React.FC = () => {
         setLoading(true);
         
         const graphqlTest = await graphqlApiService.testGraphQLConnection();
-        if (graphqlTest) {
-          console.log('GraphQL API is working!');
-        } else {
-          console.log('GraphQL API not available, falling back to mock data');
+        if (!graphqlTest) {
+          // GraphQL API not available, falling back to mock data
         }
         
         const [metricsData, readingsData, aggregatedData, processingData] = await Promise.all([
@@ -103,7 +101,7 @@ const Dashboard: React.FC = () => {
         }
       } catch (err) {
         if (isMounted) {
-          console.error('Background update failed:', err);
+          // Background update failed
         }
       } finally {
         if (isMounted) {
@@ -162,14 +160,14 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  const filteredReadings = sensorReadings.filter(reading => {
+  const filteredReadings = (sensorReadings || []).filter(reading => {
     const locationMatch = selectedLocation === 'all' || reading.sensorName === selectedLocation;
     const typeMatch = selectedSensorType === 'all' || reading.sensorType === selectedSensorType;
     return locationMatch && typeMatch;
   });
 
-  const locations = [...new Set(sensorReadings.map(reading => reading.sensorName))];
-  const sensorTypes = [...new Set(sensorReadings.map(reading => reading.sensorType))];
+  const locations = [...new Set((sensorReadings || []).map(reading => reading.sensorName))];
+  const sensorTypes = [...new Set((sensorReadings || []).map(reading => reading.sensorType))];
 
   return (
     <div className="dashboard">

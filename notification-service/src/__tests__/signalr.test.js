@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, jest } from '@jest/globals';
 
-// Mock @microsoft/signalr
+// Prepare mocks for ESM module using unstable_mockModule and dynamic imports
 const mockHubConnection = {
   start: jest.fn(),
   stop: jest.fn(),
@@ -18,7 +18,7 @@ const mockHubConnectionBuilder = {
   build: jest.fn().mockReturnValue(mockHubConnection)
 };
 
-jest.mock('@microsoft/signalr', () => ({
+jest.unstable_mockModule('@microsoft/signalr', () => ({
   __esModule: true,
   HubConnectionBuilder: jest.fn(() => mockHubConnectionBuilder),
   LogLevel: {
@@ -26,21 +26,32 @@ jest.mock('@microsoft/signalr', () => ({
   }
 }));
 
-import * as signalR from '@microsoft/signalr';
-import { connectToSignalR, getSignalRConnection, closeSignalRConnection } from '../signalr.js';
+let signalR;
+let connectToSignalR;
+let getSignalRConnection;
+let closeSignalRConnection;
 
 describe('SignalR Module', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockHubConnection.state = 'Connected';
+    // Import mocked signalR module and the module under test after mock is registered
+    return Promise.all([
+      import('@microsoft/signalr').then((m) => { signalR = m; }),
+      import('../signalr.js').then((m) => {
+        connectToSignalR = m.connectToSignalR;
+        getSignalRConnection = m.getSignalRConnection;
+        closeSignalRConnection = m.closeSignalRConnection;
+      })
+    ]);
   });
 
   describe('connectToSignalR', () => {
     it('should connect to SignalR with default URL', async () => {
       mockHubConnection.start.mockResolvedValue(undefined);
-      
+
       const connection = await connectToSignalR();
-      
+
       expect(signalR.HubConnectionBuilder).toHaveBeenCalled();
       expect(mockHubConnectionBuilder.withUrl).toHaveBeenCalledWith(
         'http://localhost:5284/notificationsHub',
@@ -114,13 +125,11 @@ describe('SignalR Module', () => {
     });
 
     it('should return null if no connection exists', async () => {
-      // This test verifies that getSignalRConnection returns the connection
-      // In a real scenario, if connectToSignalR was never called, it would return null
-      // For this test, we verify the function exists and works
-      const connection = getSignalRConnection();
+      // Ensure connection is closed/reset
+      await closeSignalRConnection();
       
-      // After connecting, it should return the connection
-      expect(connection).toBe(mockHubConnection);
+      const connection = getSignalRConnection();
+      expect(connection).toBeNull();
     });
   });
 
@@ -137,11 +146,10 @@ describe('SignalR Module', () => {
     });
 
     it('should handle missing connection gracefully', async () => {
-      // This test verifies that closeSignalRConnection handles missing connections
-      // In a real scenario, if connection is null, it should not throw
-      // For this test, we verify the function works when connection exists
-      mockHubConnection.stop.mockResolvedValue(undefined);
+      // Ensure connection is null
+      await closeSignalRConnection();
       
+      // Should not throw when called again
       await expect(closeSignalRConnection()).resolves.not.toThrow();
     });
   });

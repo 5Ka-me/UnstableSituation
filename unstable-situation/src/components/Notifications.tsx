@@ -26,7 +26,6 @@ const Notifications: React.FC = () => {
     initializeNotifications();
     
     const unsubscribe = signalRService.onNotification((notification: Notification) => {
-      console.log('Received notification:', notification);
       setNotifications(prev => [notification, ...prev]);
       setUnreadCount(prev => prev + 1);
     });
