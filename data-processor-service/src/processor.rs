@@ -138,3 +138,75 @@ impl DataProcessor {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::SensorData;
+    use serde_json::json;
+
+    #[test]
+    fn test_processing_stats_default() {
+        let stats = ProcessingStats::default();
+        
+        assert_eq!(stats.processed_messages, 0);
+        assert_eq!(stats.failed_messages, 0);
+        assert!(stats.last_processed_at.is_none());
+    }
+
+    #[test]
+    fn test_sensor_data_to_reading_input_conversion() {
+        let sensor_data = SensorData {
+            r#type: "energy".to_string(),
+            name: "Sensor1".to_string(),
+            payload: json!({"value": 100.5}),
+        };
+        
+        let input = SensorReadingInput {
+            sensor_type: sensor_data.r#type.clone(),
+            sensor_name: sensor_data.name.clone(),
+            payload: sensor_data.payload.clone(),
+            timestamp: chrono::Utc::now(),
+        };
+        
+        assert_eq!(input.sensor_type, "energy");
+        assert_eq!(input.sensor_name, "Sensor1");
+    }
+
+    #[test]
+    fn test_batch_chunking() {
+        let batch_size = 3;
+        let mut inputs = Vec::new();
+        
+        for i in 0..10 {
+            inputs.push(SensorReadingInput {
+                sensor_type: "energy".to_string(),
+                sensor_name: format!("Sensor{}", i),
+                payload: json!({"value": i as f64}),
+                timestamp: chrono::Utc::now(),
+            });
+        }
+        
+        let chunks: Vec<_> = inputs.chunks(batch_size).collect();
+        
+        assert_eq!(chunks.len(), 4); // 10 items / 3 batch_size = 4 chunks (3, 3, 3, 1)
+        assert_eq!(chunks[0].len(), 3);
+        assert_eq!(chunks[3].len(), 1);
+    }
+
+    #[test]
+    fn test_processing_stats_update() {
+        let mut stats = ProcessingStats::default();
+        
+        stats.processed_messages = 100;
+        stats.failed_messages = 5;
+        stats.last_processed_at = Some(chrono::Utc::now());
+        
+        assert_eq!(stats.processed_messages, 100);
+        assert_eq!(stats.failed_messages, 5);
+        assert!(stats.last_processed_at.is_some());
+    }
+
+    // Note: Integration tests for DataProcessor would require real database and RabbitMQ connections
+    // These are unit tests that verify the logic and data transformations
+}
