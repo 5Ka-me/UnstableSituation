@@ -11,7 +11,7 @@ public class RabbitMQService : IRabbitMQService
 {
     private readonly RabbitMQConfig _config;
     private readonly ILogger<RabbitMQService> _logger;
-    private readonly AsyncRetryPolicy _retryPolicy;
+    private readonly IAsyncPolicy _retryPolicy;
     private IConnection? _connection;
     private IModel? _channel;
 

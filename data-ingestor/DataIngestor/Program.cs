@@ -1,5 +1,9 @@
 using DataIngestor.Configuration;
 using DataIngestor.Services;
+using DataIngestor.Validators;
+using FluentValidation;
+using FluentValidation.AspNetCore;
+using Microsoft.Extensions.Options;
 using Serilog;
 using Serilog.Events;
 
@@ -21,14 +25,35 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.Configure<ServerConfig>(builder.Configuration.GetSection("Server"));
-builder.Services.Configure<ApiConfig>(builder.Configuration.GetSection("Api"));
-builder.Services.Configure<RabbitMQConfig>(builder.Configuration.GetSection("RabbitMQ"));
-builder.Services.Configure<LoggingConfig>(builder.Configuration.GetSection("Logging"));
+// Add FluentValidation
+builder.Services.AddValidatorsFromAssemblyContaining<SensorDataValidator>();
+builder.Services.AddFluentValidationAutoValidation();
+builder.Services.AddFluentValidationClientsideAdapters();
+
+// Configure and validate options
+builder.Services.AddOptions<ServerConfig>()
+    .Bind(builder.Configuration.GetSection("Server"))
+    .ValidateOnStart();
+
+builder.Services.AddOptions<ApiConfig>()
+    .Bind(builder.Configuration.GetSection("Api"))
+    .ValidateOnStart();
+
+builder.Services.AddOptions<RabbitMQConfig>()
+    .Bind(builder.Configuration.GetSection("RabbitMQ"))
+    .ValidateOnStart();
+
+builder.Services.AddOptions<LoggingConfig>()
+    .Bind(builder.Configuration.GetSection("Logging"));
+
+// Validate configuration on startup
+builder.Services.AddSingleton<IValidateOptions<ServerConfig>, ServerConfigOptionsValidator>();
+builder.Services.AddSingleton<IValidateOptions<ApiConfig>, ApiConfigOptionsValidator>();
+builder.Services.AddSingleton<IValidateOptions<RabbitMQConfig>, RabbitMQConfigOptionsValidator>();
 
 builder.Services.AddSingleton<IApiClientService>(sp =>
 {
-    var apiConfig = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<ApiConfig>>().Value;
+    var apiConfig = sp.GetRequiredService<IOptions<ApiConfig>>().Value;
     var logger = sp.GetRequiredService<ILogger<ApiClientService>>();
     
     var httpPolicy = PollyPolicies.GetHttpPolicy(
@@ -43,8 +68,9 @@ builder.Services.AddSingleton<IApiClientService>(sp =>
 
 builder.Services.AddSingleton<IRabbitMQService>(sp =>
 {
-    var rabbitMQConfig = sp.GetRequiredService<Microsoft.Extensions.Options.IOptions<RabbitMQConfig>>().Value;
+    var rabbitMQConfig = sp.GetRequiredService<IOptions<RabbitMQConfig>>().Value;
     var logger = sp.GetRequiredService<ILogger<RabbitMQService>>();
+    
     var service = new RabbitMQService(rabbitMQConfig, logger);
     service.Connect();
     return service;
@@ -63,7 +89,7 @@ app.UseSwaggerUI();
 app.UseAuthorization();
 app.MapControllers();
 
-var serverConfig = app.Configuration.GetSection("Server").Get<ServerConfig>() ?? new ServerConfig();
+var serverConfig = app.Services.GetRequiredService<IOptions<ServerConfig>>().Value;
 var serverAddress = $"{serverConfig.Host}:{serverConfig.Port}";
 app.Urls.Add($"http://{serverAddress}");
 

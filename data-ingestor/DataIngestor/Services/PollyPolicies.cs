@@ -82,7 +82,7 @@ public static class PollyPolicies
         );
     }
 
-    public static AsyncRetryPolicy GetRabbitMQRetryPolicy(int retryCount, TimeSpan delay, ILogger logger)
+    public static IAsyncPolicy GetRabbitMQRetryPolicy(int retryCount, TimeSpan delay, ILogger logger)
     {
         return Policy
             .Handle<Exception>()
