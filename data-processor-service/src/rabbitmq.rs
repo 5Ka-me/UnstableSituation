@@ -183,3 +183,89 @@ impl RabbitMQProducer {
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_sensor_data_serialization_for_rabbitmq() {
+        let sensor_data = vec![
+            SensorData {
+                r#type: "energy".to_string(),
+                name: "Sensor1".to_string(),
+                payload: json!({"value": 100.5}),
+            },
+            SensorData {
+                r#type: "air_quality".to_string(),
+                name: "Sensor2".to_string(),
+                payload: json!({"co2": 450, "pm25": 25}),
+            },
+        ];
+        
+        let json = serde_json::to_vec(&sensor_data).unwrap();
+        let deserialized: Vec<SensorData> = serde_json::from_slice(&json).unwrap();
+        
+        assert_eq!(deserialized.len(), 2);
+        assert_eq!(deserialized[0].r#type, "energy");
+        assert_eq!(deserialized[1].r#type, "air_quality");
+    }
+
+    #[test]
+    fn test_sensor_data_deserialization() {
+        let json_data = r#"[{"type":"energy","name":"Sensor1","payload":{"value":100.5}}]"#;
+        let sensor_data: Vec<SensorData> = serde_json::from_str(json_data).unwrap();
+        
+        assert_eq!(sensor_data.len(), 1);
+        assert_eq!(sensor_data[0].r#type, "energy");
+        assert_eq!(sensor_data[0].name, "Sensor1");
+    }
+
+    #[test]
+    fn test_sensor_data_with_different_payloads() {
+        let energy_data = SensorData {
+            r#type: "energy".to_string(),
+            name: "EnergySensor".to_string(),
+            payload: json!({"energy": 150.0}),
+        };
+        
+        let air_quality_data = SensorData {
+            r#type: "air_quality".to_string(),
+            name: "AirQualitySensor".to_string(),
+            payload: json!({"co2": 450, "pm25": 25, "humidity": 60}),
+        };
+        
+        let motion_data = SensorData {
+            r#type: "motion".to_string(),
+            name: "MotionSensor".to_string(),
+            payload: json!({"motion_detected": true}),
+        };
+        
+        assert_eq!(energy_data.r#type, "energy");
+        assert_eq!(air_quality_data.r#type, "air_quality");
+        assert_eq!(motion_data.r#type, "motion");
+    }
+
+    #[test]
+    fn test_sensor_data_batch_serialization() {
+        let batch: Vec<SensorData> = (0..5)
+            .map(|i| SensorData {
+                r#type: "energy".to_string(),
+                name: format!("Sensor{}", i),
+                payload: json!({"value": i as f64 * 10.0}),
+            })
+            .collect();
+        
+        let json = serde_json::to_vec(&batch).unwrap();
+        let deserialized: Vec<SensorData> = serde_json::from_slice(&json).unwrap();
+        
+        assert_eq!(deserialized.len(), 5);
+        for (i, data) in deserialized.iter().enumerate() {
+            assert_eq!(data.name, format!("Sensor{}", i));
+        }
+    }
+
+    // Note: Integration tests for RabbitMQConsumer and RabbitMQProducer would require
+    // a real RabbitMQ connection. These are unit tests that verify serialization/deserialization
+}

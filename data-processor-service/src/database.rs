@@ -108,3 +108,61 @@ impl Database {
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use serde_json::json;
+
+    #[test]
+    fn test_sensor_reading_input_creation() {
+        let input = SensorReadingInput {
+            sensor_type: "energy".to_string(),
+            sensor_name: "Sensor1".to_string(),
+            payload: json!({"value": 100.5}),
+            timestamp: Utc::now(),
+        };
+        
+        assert_eq!(input.sensor_type, "energy");
+        assert_eq!(input.sensor_name, "Sensor1");
+    }
+
+    #[test]
+    fn test_sensor_reading_input_with_different_types() {
+        let energy_input = SensorReadingInput {
+            sensor_type: "energy".to_string(),
+            sensor_name: "EnergySensor".to_string(),
+            payload: json!({"energy": 150.0}),
+            timestamp: Utc::now(),
+        };
+        
+        let air_quality_input = SensorReadingInput {
+            sensor_type: "air_quality".to_string(),
+            sensor_name: "AirQualitySensor".to_string(),
+            payload: json!({"co2": 450, "pm25": 25, "humidity": 60}),
+            timestamp: Utc::now(),
+        };
+        
+        assert_eq!(energy_input.sensor_type, "energy");
+        assert_eq!(air_quality_input.sensor_type, "air_quality");
+    }
+
+    #[test]
+    fn test_sensor_reading_input_serialization() {
+        let input = SensorReadingInput {
+            sensor_type: "motion".to_string(),
+            sensor_name: "MotionSensor".to_string(),
+            payload: json!({"motion_detected": true}),
+            timestamp: Utc::now(),
+        };
+        
+        let json = serde_json::to_string(&input).unwrap();
+        let deserialized: SensorReadingInput = serde_json::from_str(&json).unwrap();
+        
+        assert_eq!(deserialized.sensor_type, "motion");
+        assert_eq!(deserialized.sensor_name, "MotionSensor");
+    }
+
+    // Note: Integration tests for Database would require a real PostgreSQL connection
+    // These are unit tests that verify the data structures and logic
+}
