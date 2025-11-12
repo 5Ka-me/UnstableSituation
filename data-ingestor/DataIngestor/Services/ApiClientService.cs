@@ -1,6 +1,7 @@
 using System.Text.Json;
 using DataIngestor.Configuration;
 using DataIngestor.Models;
+using Polly;
 
 namespace DataIngestor.Services;
 
@@ -9,14 +10,22 @@ public class ApiClientService : IApiClientService
     private readonly HttpClient _httpClient;
     private readonly ApiConfig _apiConfig;
     private readonly ILogger<ApiClientService> _logger;
+    private readonly IAsyncPolicy<HttpResponseMessage> _httpPolicy;
     private readonly bool _disposeHttpClient;
 
-    public ApiClientService(ApiConfig apiConfig, ILogger<ApiClientService> logger)
-        : this(apiConfig, logger, null)
+    public ApiClientService(
+        ApiConfig apiConfig,
+        ILogger<ApiClientService> logger,
+        IAsyncPolicy<HttpResponseMessage>? httpPolicy = null)
+        : this(apiConfig, logger, null, httpPolicy)
     {
     }
 
-    public ApiClientService(ApiConfig apiConfig, ILogger<ApiClientService> logger, HttpClient? httpClient)
+    public ApiClientService(
+        ApiConfig apiConfig,
+        ILogger<ApiClientService> logger,
+        HttpClient? httpClient,
+        IAsyncPolicy<HttpResponseMessage>? httpPolicy = null)
     {
         _apiConfig = apiConfig;
         _logger = logger;
@@ -30,7 +39,7 @@ public class ApiClientService : IApiClientService
         {
             _httpClient = new HttpClient
             {
-                Timeout = _apiConfig.GetTimeout()
+                Timeout = TimeSpan.FromMinutes(5) // Longer timeout, actual timeout handled by Polly
             };
             _disposeHttpClient = true;
         }
@@ -39,6 +48,13 @@ public class ApiClientService : IApiClientService
         {
             _httpClient.DefaultRequestHeaders.Add("X-Api-Key", "supersecret");
         }
+
+        _httpPolicy = httpPolicy ?? PollyPolicies.GetHttpPolicy(
+            _apiConfig.RetryCount,
+            _apiConfig.CircuitBreakerFailureThreshold,
+            _apiConfig.GetCircuitBreakerDuration(),
+            _apiConfig.GetTimeout(),
+            _logger);
     }
 
     public async Task<List<SensorData>> FetchDataAsync(CancellationToken cancellationToken = default)
@@ -46,7 +62,12 @@ public class ApiClientService : IApiClientService
         try
         {
             var url = $"{_apiConfig.BaseUrl.TrimEnd('/')}/meters";
-            var response = await _httpClient.GetAsync(url, cancellationToken);
+            
+            _logger.LogDebug("Fetching data from {Url}", url);
+            
+            var response = await _httpPolicy.ExecuteAsync(async () =>
+                await _httpClient.GetAsync(url, cancellationToken));
+
             response.EnsureSuccessStatusCode();
 
             var content = await response.Content.ReadAsStringAsync(cancellationToken);
@@ -55,11 +76,12 @@ public class ApiClientService : IApiClientService
                 PropertyNameCaseInsensitive = true
             });
 
+            _logger.LogDebug("Successfully fetched {Count} sensor data items", data?.Count ?? 0);
             return data ?? new List<SensorData>();
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Failed to fetch data from API");
+            _logger.LogError(ex, "Failed to fetch data from API after retries");
             throw;
         }
     }

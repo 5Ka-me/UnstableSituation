@@ -11,6 +11,8 @@ public class ApiConfig
     public string BaseUrl { get; set; } = string.Empty;
     public string Timeout { get; set; } = "00:00:30"; // TimeSpan format
     public int RetryCount { get; set; } = 3;
+    public int CircuitBreakerFailureThreshold { get; set; } = 5;
+    public string CircuitBreakerDuration { get; set; } = "00:01:00"; // TimeSpan format
 
     public TimeSpan GetTimeout()
     {
@@ -34,6 +36,14 @@ public class ApiConfig
 
         return TimeSpan.FromSeconds(30);
     }
+
+    public TimeSpan GetCircuitBreakerDuration()
+    {
+        if (TimeSpan.TryParse(CircuitBreakerDuration, out var duration))
+            return duration;
+        
+        return TimeSpan.FromMinutes(1);
+    }
 }
 
 public class RabbitMQConfig
@@ -42,6 +52,16 @@ public class RabbitMQConfig
     public string ExchangeName { get; set; } = "meter-data-exchange";
     public string QueueName { get; set; } = "meter-data-queue";
     public string RoutingKey { get; set; } = "meter.data";
+    public int RetryCount { get; set; } = 3;
+    public string RetryDelay { get; set; } = "00:00:05"; // TimeSpan format
+
+    public TimeSpan GetRetryDelay()
+    {
+        if (TimeSpan.TryParse(RetryDelay, out var delay))
+            return delay;
+        
+        return TimeSpan.FromSeconds(2);
+    }
 }
 
 public class LoggingConfig
