@@ -5,6 +5,8 @@ VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataIngestor", "DataIngestor\DataIngestor.csproj", "{B5D2FDCE-2BD4-4B53-965B-3E9345676EC1}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DataIngestor.Tests", "DataIngestor.Tests\DataIngestor.Tests.csproj", "{CC1C9C5F-967C-4F6B-AB5C-809485F1922E}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -27,6 +29,18 @@ Global
 		{B5D2FDCE-2BD4-4B53-965B-3E9345676EC1}.Release|x64.Build.0 = Release|Any CPU
 		{B5D2FDCE-2BD4-4B53-965B-3E9345676EC1}.Release|x86.ActiveCfg = Release|Any CPU
 		{B5D2FDCE-2BD4-4B53-965B-3E9345676EC1}.Release|x86.Build.0 = Release|Any CPU
+		{CC1C9C5F-967C-4F6B-AB5C-809485F1922E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CC1C9C5F-967C-4F6B-AB5C-809485F1922E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CC1C9C5F-967C-4F6B-AB5C-809485F1922E}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{CC1C9C5F-967C-4F6B-AB5C-809485F1922E}.Debug|x64.Build.0 = Debug|Any CPU
+		{CC1C9C5F-967C-4F6B-AB5C-809485F1922E}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{CC1C9C5F-967C-4F6B-AB5C-809485F1922E}.Debug|x86.Build.0 = Debug|Any CPU
+		{CC1C9C5F-967C-4F6B-AB5C-809485F1922E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CC1C9C5F-967C-4F6B-AB5C-809485F1922E}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CC1C9C5F-967C-4F6B-AB5C-809485F1922E}.Release|x64.ActiveCfg = Release|Any CPU
+		{CC1C9C5F-967C-4F6B-AB5C-809485F1922E}.Release|x64.Build.0 = Release|Any CPU
+		{CC1C9C5F-967C-4F6B-AB5C-809485F1922E}.Release|x86.ActiveCfg = Release|Any CPU
+		{CC1C9C5F-967C-4F6B-AB5C-809485F1922E}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

@@ -5,14 +5,14 @@ namespace DataIngestor.Services;
 
 public class DataIngestionService : BackgroundService
 {
-    private readonly ApiClientService _apiClient;
-    private readonly RabbitMQService _rabbitMQService;
+    private readonly IApiClientService _apiClient;
+    private readonly IRabbitMQService _rabbitMQService;
     private readonly ILogger<DataIngestionService> _logger;
     private readonly TimeSpan _interval = TimeSpan.FromSeconds(5);
 
     public DataIngestionService(
-        ApiClientService apiClient,
-        RabbitMQService rabbitMQService,
+        IApiClientService apiClient,
+        IRabbitMQService rabbitMQService,
         ILogger<DataIngestionService> logger)
     {
         _apiClient = apiClient;
