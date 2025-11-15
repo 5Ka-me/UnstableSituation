@@ -43,6 +43,11 @@ uuid = { version = "1.6", features = ["v4", "serde", "std"] }
 # Futures utilities
 futures-lite = "2.0"
 
+# Metrics
+prometheus = "0.13"
+axum = "0.7"
+tokio-stream = "0.1"
+
 
 [dev-dependencies]
 tokio-test = "0.4"

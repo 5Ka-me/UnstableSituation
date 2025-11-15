@@ -3,8 +3,28 @@ using GraphQLGateway.Data;
 using GraphQLGateway.Queries;
 using GraphQLGateway.Types;
 using GraphQLGateway.Hubs;
+using OpenTelemetry.Metrics;
+using OpenTelemetry.Resources;
+using System.Diagnostics.Metrics;
 
 var builder = WebApplication.CreateBuilder(args);
+
+// OpenTelemetry configuration
+var serviceName = "graphql-gateway";
+var serviceVersion = "1.0.0";
+
+builder.Services.AddOpenTelemetry()
+    .ConfigureResource(resource => resource
+        .AddService(serviceName: serviceName, serviceVersion: serviceVersion))
+    .WithMetrics(metrics =>
+    {
+        metrics
+            .AddAspNetCoreInstrumentation()
+            .AddHttpClientInstrumentation()
+            .AddRuntimeInstrumentation()
+            .AddMeter("GraphQLGateway.Metrics")
+            .AddPrometheusExporter();
+    });
 
 builder.Services.AddControllers();
 
@@ -74,6 +94,9 @@ app.UseCors("AllowFrontend");
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Prometheus metrics endpoint
+app.MapPrometheusScrapingEndpoint();
 
 app.MapGraphQL().WithOptions(new HotChocolate.AspNetCore.GraphQLServerOptions
 {

@@ -20,7 +20,7 @@ const mockHubConnectionBuilder = {
 
 jest.unstable_mockModule('@microsoft/signalr', () => ({
   __esModule: true,
-  HubConnectionBuilder: jest.fn(() => mockHubConnectionBuilder),
+  HubConnectionBuilder: jest.fn().mockImplementation(() => mockHubConnectionBuilder),
   LogLevel: {
     Information: 2
   }

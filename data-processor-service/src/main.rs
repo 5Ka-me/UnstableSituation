@@ -2,6 +2,9 @@ use anyhow::Result;
 use clap::Parser;
 use data_processor_service::config::Config;
 use data_processor_service::processor::DataProcessor;
+use data_processor_service::metrics::Metrics;
+use data_processor_service::metrics_server::start_metrics_server;
+use std::sync::Arc;
 use tracing::{info, error};
 
 #[derive(Parser)]
@@ -28,7 +31,18 @@ async fn main() -> Result<()> {
     info!("RabbitMQ connection: {}", config.rabbitmq.connection_string);
     info!("Database URL: {}", config.database.url);
     
-    let mut processor = match DataProcessor::new(config).await {
+    // Initialize metrics
+    let metrics = Arc::new(Metrics::new());
+    
+    // Start metrics server in background
+    let metrics_clone = metrics.clone();
+    tokio::spawn(async move {
+        if let Err(e) = start_metrics_server(metrics_clone, 3002).await {
+            error!("Metrics server error: {}", e);
+        }
+    });
+    
+    let mut processor = match DataProcessor::new(config, metrics.clone()).await {
         Ok(p) => {
             info!("Data processor initialized successfully");
             p

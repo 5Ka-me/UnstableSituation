@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text.Json;
 using DataIngestor.Configuration;
 using DataIngestor.Models;
@@ -59,11 +60,14 @@ public class ApiClientService : IApiClientService
 
     public async Task<List<SensorData>> FetchDataAsync(CancellationToken cancellationToken = default)
     {
+        var stopwatch = Stopwatch.StartNew();
         try
         {
             var url = $"{_apiConfig.BaseUrl.TrimEnd('/')}/meters";
             
             _logger.LogDebug("Fetching data from {Url}", url);
+            
+            MetricsService.ApiRequestCounter.Add(1, new KeyValuePair<string, object?>("endpoint", "/meters"));
             
             var response = await _httpPolicy.ExecuteAsync(async () =>
                 await _httpClient.GetAsync(url, cancellationToken));
@@ -76,13 +80,23 @@ public class ApiClientService : IApiClientService
                 PropertyNameCaseInsensitive = true
             });
 
-            _logger.LogDebug("Successfully fetched {Count} sensor data items", data?.Count ?? 0);
+            var dataCount = data?.Count ?? 0;
+            MetricsService.DataFetchedCounter.Add(dataCount);
+            MetricsService.ApiRequestDuration.Record(stopwatch.Elapsed.TotalSeconds);
+
+            _logger.LogDebug("Successfully fetched {Count} sensor data items", dataCount);
             return data ?? new List<SensorData>();
         }
         catch (Exception ex)
         {
+            MetricsService.ApiErrorCounter.Add(1);
+            MetricsService.ApiRequestDuration.Record(stopwatch.Elapsed.TotalSeconds);
             _logger.LogError(ex, "Failed to fetch data from API after retries");
             throw;
+        }
+        finally
+        {
+            stopwatch.Stop();
         }
     }
 
