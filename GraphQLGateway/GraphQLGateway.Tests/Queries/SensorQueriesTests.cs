@@ -27,7 +27,7 @@ public class SensorQueriesTests : IDisposable
     public async Task GetSensorReadings_ShouldReturnList()
     {
         // Act
-        var result = await _queries.GetSensorReadings(_context);
+        var result = await _queries.GetSensorReadings(null, null, _context);
 
         // Assert
         result.Should().NotBeNull();
@@ -49,7 +49,7 @@ public class SensorQueriesTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _queries.GetSensorReadings(_context);
+        var result = await _queries.GetSensorReadings(null, null, _context);
 
         // Assert
         result.Should().NotBeEmpty();
@@ -74,10 +74,40 @@ public class SensorQueriesTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _queries.GetSensorReadings(_context);
+        var result = await _queries.GetSensorReadings(null, null, _context);
 
         // Assert
         result.Should().HaveCountLessOrEqualTo(50);
+    }
+
+    [Fact]
+    public async Task GetSensorReadings_ShouldFilterByTimeRange()
+    {
+        // Arrange
+        _context.SensorReadings.Add(new SensorReading
+        {
+            Id = Guid.NewGuid(),
+            SensorType = "energy",
+            SensorName = "Sensor1",
+            Payload = "{\"value\": 100}",
+            Timestamp = DateTime.UtcNow.AddMinutes(-2)
+        });
+        _context.SensorReadings.Add(new SensorReading
+        {
+            Id = Guid.NewGuid(),
+            SensorType = "energy",
+            SensorName = "Sensor2",
+            Payload = "{\"value\": 200}",
+            Timestamp = DateTime.UtcNow.AddHours(-2)
+        });
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _queries.GetSensorReadings(null, "5m", _context);
+
+        // Assert
+        result.Should().NotBeEmpty();
+        result.All(r => r.Timestamp >= DateTime.UtcNow.AddMinutes(-5)).Should().BeTrue();
     }
 
     [Fact]
@@ -239,11 +269,41 @@ public class SensorQueriesTests : IDisposable
         await _context.SaveChangesAsync();
 
         // Act
-        var result = await _queries.GetSensorReadingsByLocation("Location1", null, _context);
+        var result = await _queries.GetSensorReadingsByLocation("Location1", null, null, _context);
 
         // Assert
         result.Should().NotBeEmpty();
         result.All(r => r.SensorName == "Location1").Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task GetSensorReadingsByLocation_ShouldFilterByTimeRange()
+    {
+        // Arrange
+        _context.SensorReadings.Add(new SensorReading
+        {
+            Id = Guid.NewGuid(),
+            SensorType = "energy",
+            SensorName = "Location1",
+            Payload = "{\"value\": 100}",
+            Timestamp = DateTime.UtcNow.AddMinutes(-2)
+        });
+        _context.SensorReadings.Add(new SensorReading
+        {
+            Id = Guid.NewGuid(),
+            SensorType = "energy",
+            SensorName = "Location1",
+            Payload = "{\"value\": 200}",
+            Timestamp = DateTime.UtcNow.AddHours(-2)
+        });
+        await _context.SaveChangesAsync();
+
+        // Act
+        var result = await _queries.GetSensorReadingsByLocation("Location1", null, "5m", _context);
+
+        // Assert
+        result.Should().NotBeEmpty();
+        result.All(r => r.Timestamp >= DateTime.UtcNow.AddMinutes(-5)).Should().BeTrue();
     }
 
     [Fact]
@@ -322,10 +382,16 @@ public class SensorQueriesTests : IDisposable
     }
 
     [Theory]
+    [InlineData("30s")]
+    [InlineData("1m")]
+    [InlineData("5m")]
+    [InlineData("15m")]
+    [InlineData("30m")]
     [InlineData("1h")]
     [InlineData("6h")]
-    [InlineData("12h")]
+    [InlineData("24h")]
     [InlineData("7d")]
+    [InlineData("30d")]
     [InlineData(null)]
     public async Task GetAggregatedData_ShouldHandleTimeRanges(string? timeRange)
     {

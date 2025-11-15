@@ -128,23 +128,38 @@ describe('GraphQLApiService', () => {
       expect(result).toEqual(mockReadings);
       expect(apolloClient.query).toHaveBeenCalledWith({
         query: expect.any(Object),
-        variables: { limit: 50, offset: 0 },
+        variables: { limit: 50, timeRange: undefined },
         fetchPolicy: 'cache-first',
       });
     });
 
-    it('should use provided limit and offset', async () => {
+    it('should use provided limit, offset, and timeRange', async () => {
       const mockReadings: any[] = [];
       (apolloClient.query as jest.Mock).mockResolvedValue({
         data: { sensorReadings: mockReadings },
       });
 
-      await graphqlApiService.getSensorReadings(20, 10);
+      await graphqlApiService.getSensorReadings(20, 10, false, '5m');
 
       expect(apolloClient.query).toHaveBeenCalledWith({
         query: expect.any(Object),
-        variables: { limit: 20, offset: 10 },
+        variables: { limit: 20, timeRange: '5m' },
         fetchPolicy: 'cache-first',
+      });
+    });
+
+    it('should use network-only policy when forceRefresh is true', async () => {
+      const mockReadings: any[] = [];
+      (apolloClient.query as jest.Mock).mockResolvedValue({
+        data: { sensorReadings: mockReadings },
+      });
+
+      await graphqlApiService.getSensorReadings(50, 0, true, '1h');
+
+      expect(apolloClient.query).toHaveBeenCalledWith({
+        query: expect.any(Object),
+        variables: { limit: 50, timeRange: '1h' },
+        fetchPolicy: 'network-only',
       });
     });
   });
@@ -178,7 +193,7 @@ describe('GraphQLApiService', () => {
   });
 
   describe('getSensorReadingsByLocation', () => {
-    it('should fetch readings by location', async () => {
+    it('should fetch readings by location with default parameters', async () => {
       const mockReadings = [
         {
           id: '1',
@@ -199,8 +214,23 @@ describe('GraphQLApiService', () => {
       expect(result).toEqual(mockReadings);
       expect(apolloClient.query).toHaveBeenCalledWith({
         query: expect.any(Object),
-        variables: { sensorName: 'Office', limit: 50 },
-        fetchPolicy: 'cache-first',
+        variables: { sensorName: 'Office', limit: 50, timeRange: undefined },
+        fetchPolicy: 'network-only',
+      });
+    });
+
+    it('should use provided limit and timeRange', async () => {
+      const mockReadings: any[] = [];
+      (apolloClient.query as jest.Mock).mockResolvedValue({
+        data: { sensorReadingsByLocation: mockReadings },
+      });
+
+      await graphqlApiService.getSensorReadingsByLocation('Office', 100, '5m');
+
+      expect(apolloClient.query).toHaveBeenCalledWith({
+        query: expect.any(Object),
+        variables: { sensorName: 'Office', limit: 100, timeRange: '5m' },
+        fetchPolicy: 'network-only',
       });
     });
   });

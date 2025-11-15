@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Card, List, Badge, Button, Empty, Spin, Alert } from 'antd';
-import { BellOutlined, CloseOutlined, CheckOutlined } from '@ant-design/icons';
+import { BellOutlined, CloseOutlined, CheckOutlined, DeleteOutlined } from '@ant-design/icons';
 import { signalRService } from '../services/signalRService';
 import './Notifications.css';
 
@@ -17,6 +17,7 @@ const Notifications: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [unreadCount, setUnreadCount] = useState<number>(0);
+  const [isExpanded, setIsExpanded] = useState<boolean>(false);
 
   useEffect(() => {
     const initializeNotifications = async () => {
@@ -93,7 +94,20 @@ const Notifications: React.FC = () => {
   };
 
   const removeNotification = (notificationId: string): void => {
-    setNotifications(prev => prev.filter(n => n.id !== notificationId));
+    setNotifications(prev => {
+      const removed = prev.find(n => n.id === notificationId);
+      const filtered = prev.filter(n => n.id !== notificationId);
+      // Обновляем счетчик непрочитанных при удалении
+      if (removed && !removed.read) {
+        setUnreadCount(count => Math.max(0, count - 1));
+      }
+      return filtered;
+    });
+  };
+
+  const removeAllNotifications = (): void => {
+    setNotifications([]);
+    setUnreadCount(0);
   };
 
   const getNotificationIcon = (type: Notification['type']): React.ReactNode => {
@@ -158,14 +172,25 @@ const Notifications: React.FC = () => {
       }
       extra={
         notifications.length > 0 && (
-          <Button 
-            type="link" 
-            size="small" 
-            onClick={markAllAsRead}
-            disabled={unreadCount === 0}
-          >
-            Mark all as read
-          </Button>
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <Button 
+              type="link" 
+              size="small" 
+              onClick={markAllAsRead}
+              disabled={unreadCount === 0}
+            >
+              Mark all as read
+            </Button>
+            <Button 
+              type="link" 
+              size="small" 
+              danger
+              icon={<DeleteOutlined />}
+              onClick={removeAllNotifications}
+            >
+              Delete all
+            </Button>
+          </div>
         )
       }
       className="notifications-card"
@@ -176,50 +201,63 @@ const Notifications: React.FC = () => {
           image={Empty.PRESENTED_IMAGE_SIMPLE}
         />
       ) : (
-        <List
-          dataSource={notifications}
-          renderItem={(notification) => (
-            <List.Item
-              className={getNotificationClass(notification.type)}
-              actions={[
-                <Button
-                  key="read"
-                  type="link"
-                  size="small"
-                  icon={<CheckOutlined />}
-                  onClick={() => markAsRead(notification.id)}
-                  disabled={notification.read}
-                >
-                  {notification.read ? 'Read' : 'Mark as read'}
-                </Button>,
-                <Button
-                  key="remove"
-                  type="link"
-                  size="small"
-                  icon={<CloseOutlined />}
-                  onClick={() => removeNotification(notification.id)}
-                  danger
-                >
-                  Remove
-                </Button>
-              ]}
-            >
-              <List.Item.Meta
-                avatar={getNotificationIcon(notification.type)}
-                title={
-                  <div className="notification-content">
-                    <span className={`notification-message ${notification.read ? 'read' : 'unread'}`}>
-                      {notification.message}
-                    </span>
-                    <span className="notification-time">
-                      {new Date(notification.timestamp).toLocaleString()}
-                    </span>
-                  </div>
-                }
-              />
-            </List.Item>
+        <>
+          <List
+            dataSource={isExpanded ? notifications : notifications.slice(0, 3)}
+            renderItem={(notification) => (
+              <List.Item
+                className={getNotificationClass(notification.type)}
+                actions={[
+                  <Button
+                    key="read"
+                    type="link"
+                    size="small"
+                    icon={<CheckOutlined />}
+                    onClick={() => markAsRead(notification.id)}
+                    disabled={notification.read}
+                  >
+                    {notification.read ? 'Read' : 'Mark as read'}
+                  </Button>,
+                  <Button
+                    key="remove"
+                    type="link"
+                    size="small"
+                    icon={<CloseOutlined />}
+                    onClick={() => removeNotification(notification.id)}
+                    danger
+                  >
+                    Remove
+                  </Button>
+                ]}
+              >
+                <List.Item.Meta
+                  avatar={getNotificationIcon(notification.type)}
+                  title={
+                    <div className="notification-content">
+                      <span className={`notification-message ${notification.read ? 'read' : 'unread'}`}>
+                        {notification.message}
+                      </span>
+                      <span className="notification-time">
+                        {new Date(notification.timestamp).toLocaleString()}
+                      </span>
+                    </div>
+                  }
+                />
+              </List.Item>
+            )}
+          />
+          {notifications.length > 3 && (
+            <div style={{ textAlign: 'center', marginTop: 12 }}>
+              <Button 
+                type="link" 
+                size="small"
+                onClick={() => setIsExpanded(!isExpanded)}
+              >
+                {isExpanded ? 'Show less' : `Show all (${notifications.length})`}
+              </Button>
+            </div>
           )}
-        />
+        </>
       )}
     </Card>
   );

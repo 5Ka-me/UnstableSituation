@@ -4,23 +4,17 @@ import { TimeRange } from '../../types';
 
 interface DashboardControlsProps {
   selectedLocation: string;
-  selectedSensorType: string;
   selectedTimeRange: TimeRange;
   locations: string[];
-  sensorTypes: string[];
   onLocationChange: (location: string) => void;
-  onSensorTypeChange: (sensorType: string) => void;
   onTimeRangeChange: (timeRange: TimeRange) => void;
 }
 
 const DashboardControls: React.FC<DashboardControlsProps> = ({
   selectedLocation,
-  selectedSensorType,
   selectedTimeRange,
   locations,
-  sensorTypes,
   onLocationChange,
-  onSensorTypeChange,
   onTimeRangeChange
 }) => {
   return (
@@ -33,23 +27,12 @@ const DashboardControls: React.FC<DashboardControlsProps> = ({
         value={selectedLocation}
         onChange={onLocationChange}
         style={{ width: 150, marginRight: 16 }}
+        placeholder="Select Location"
       >
         <Select.Option value="all">All Locations</Select.Option>
         {locations.map(location => (
           <Select.Option key={location} value={location}>
             {location}
-          </Select.Option>
-        ))}
-      </Select>
-      <Select
-        value={selectedSensorType}
-        onChange={onSensorTypeChange}
-        style={{ width: 150, marginRight: 16 }}
-      >
-        <Select.Option value="all">All Types</Select.Option>
-        {sensorTypes.map(type => (
-          <Select.Option key={type} value={type}>
-            {type}
           </Select.Option>
         ))}
       </Select>

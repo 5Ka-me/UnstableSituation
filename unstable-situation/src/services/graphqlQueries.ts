@@ -16,8 +16,8 @@ export const GET_SENSOR_METRICS = gql`
 
 // Запрос для получения показаний сенсоров
 export const GET_SENSOR_READINGS = gql`
-  query GetSensorReadings {
-    sensorReadings {
+  query GetSensorReadings($limit: Int, $timeRange: String) {
+    sensorReadings(limit: $limit, timeRange: $timeRange) {
       id
       sensorType
       sensorName
@@ -44,8 +44,8 @@ export const GET_SENSOR_READINGS_BY_TYPE = gql`
 
 // Запрос для получения показаний по локации
 export const GET_SENSOR_READINGS_BY_LOCATION = gql`
-  query GetSensorReadingsByLocation($sensorName: String!, $limit: Int) {
-    sensorReadingsByLocation(sensorName: $sensorName, limit: $limit) {
+  query GetSensorReadingsByLocation($sensorName: String!, $limit: Int, $timeRange: String) {
+    sensorReadingsByLocation(sensorName: $sensorName, limit: $limit, timeRange: $timeRange) {
       id
       sensorType
       sensorName

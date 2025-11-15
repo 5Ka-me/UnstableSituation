@@ -11,13 +11,37 @@ namespace GraphQLGateway.Queries;
 public class SensorQueries
 {
     public async Task<List<SensorReadingType>> GetSensorReadings(
+        int? limit,
+        string? timeRange,
         [Service] SensorDbContext context)
     {
         try
         {
-            var readings = await context.SensorReadings
+            var query = context.SensorReadings.AsQueryable();
+
+            // Фильтруем по времени, если указан timeRange
+            if (!string.IsNullOrEmpty(timeRange))
+            {
+                DateTime fromTime = timeRange switch
+                {
+                    "30s" => DateTime.UtcNow.AddSeconds(-30),
+                    "1m" => DateTime.UtcNow.AddMinutes(-1),
+                    "5m" => DateTime.UtcNow.AddMinutes(-5),
+                    "15m" => DateTime.UtcNow.AddMinutes(-15),
+                    "30m" => DateTime.UtcNow.AddMinutes(-30),
+                    "1h" => DateTime.UtcNow.AddHours(-1),
+                    "6h" => DateTime.UtcNow.AddHours(-6),
+                    "24h" => DateTime.UtcNow.AddHours(-24),
+                    "7d" => DateTime.UtcNow.AddDays(-7),
+                    "30d" => DateTime.UtcNow.AddDays(-30),
+                    _ => DateTime.UtcNow.AddHours(-24)
+                };
+                query = query.Where(r => r.Timestamp >= fromTime);
+            }
+
+            var readings = await query
                 .OrderByDescending(r => r.Timestamp)
-                .Take(50)
+                .Take(limit ?? 50)
                 .ToListAsync();
 
             return readings.Select(r => new SensorReadingType
@@ -197,13 +221,35 @@ public class SensorQueries
     public async Task<List<SensorReadingType>> GetSensorReadingsByLocation(
         string sensorName, 
         int? limit,
+        string? timeRange,
         [Service] SensorDbContext context)
     {
         try
         {
             var query = context.SensorReadings
-                .Where(r => r.SensorName == sensorName)
-                .OrderByDescending(r => r.Timestamp);
+                .Where(r => r.SensorName == sensorName);
+
+            // Фильтруем по времени, если указан timeRange
+            if (!string.IsNullOrEmpty(timeRange))
+            {
+                DateTime fromTime = timeRange switch
+                {
+                    "30s" => DateTime.UtcNow.AddSeconds(-30),
+                    "1m" => DateTime.UtcNow.AddMinutes(-1),
+                    "5m" => DateTime.UtcNow.AddMinutes(-5),
+                    "15m" => DateTime.UtcNow.AddMinutes(-15),
+                    "30m" => DateTime.UtcNow.AddMinutes(-30),
+                    "1h" => DateTime.UtcNow.AddHours(-1),
+                    "6h" => DateTime.UtcNow.AddHours(-6),
+                    "24h" => DateTime.UtcNow.AddHours(-24),
+                    "7d" => DateTime.UtcNow.AddDays(-7),
+                    "30d" => DateTime.UtcNow.AddDays(-30),
+                    _ => DateTime.UtcNow.AddHours(-24)
+                };
+                query = query.Where(r => r.Timestamp >= fromTime);
+            }
+
+            query = query.OrderByDescending(r => r.Timestamp);
 
             if (limit.HasValue)
             {
@@ -237,10 +283,16 @@ public class SensorQueries
         {
             DateTime fromTime = timeRange switch
             {
+                "30s" => DateTime.UtcNow.AddSeconds(-30),
+                "1m" => DateTime.UtcNow.AddMinutes(-1),
+                "5m" => DateTime.UtcNow.AddMinutes(-5),
+                "15m" => DateTime.UtcNow.AddMinutes(-15),
+                "30m" => DateTime.UtcNow.AddMinutes(-30),
                 "1h" => DateTime.UtcNow.AddHours(-1),
                 "6h" => DateTime.UtcNow.AddHours(-6),
-                "12h" => DateTime.UtcNow.AddHours(-12),
+                "24h" => DateTime.UtcNow.AddHours(-24),
                 "7d" => DateTime.UtcNow.AddDays(-7),
+                "30d" => DateTime.UtcNow.AddDays(-30),
                 _ => DateTime.UtcNow.AddHours(-24)
             };
 
@@ -251,28 +303,33 @@ public class SensorQueries
 
             var aggregatedData = new List<SensorDataPointType>();
 
-            var groupedReadings = timeRange switch
+            // Определяем размер интервала для группировки
+            TimeSpan interval = timeRange switch
             {
-                "30s" or "1m" or "5m" => readings
-                    .GroupBy(r => new DateTime(r.Timestamp.Year, r.Timestamp.Month, r.Timestamp.Day, r.Timestamp.Hour, r.Timestamp.Minute, r.Timestamp.Second / 10 * 10))
-                    .OrderBy(g => g.Key),
-                "15m" or "30m" => readings
-                    .GroupBy(r => new DateTime(r.Timestamp.Year, r.Timestamp.Month, r.Timestamp.Day, r.Timestamp.Hour, r.Timestamp.Minute, 0))
-                    .OrderBy(g => g.Key),
-                "1h" or "6h" => readings
-                    .GroupBy(r => new DateTime(r.Timestamp.Year, r.Timestamp.Month, r.Timestamp.Day, r.Timestamp.Hour, r.Timestamp.Minute / 5 * 5, 0))
-                    .OrderBy(g => g.Key),
-                "12h" or "24h" => readings
-                    .GroupBy(r => new DateTime(r.Timestamp.Year, r.Timestamp.Month, r.Timestamp.Day, r.Timestamp.Hour, 0, 0))
-                    .OrderBy(g => g.Key),
-                "7d" or "30d" => readings
-                    .GroupBy(r => new DateTime(r.Timestamp.Year, r.Timestamp.Month, r.Timestamp.Day, 0, 0, 0))
-                    .OrderBy(g => g.Key),
-                _ => readings
-                    .GroupBy(r => new DateTime(r.Timestamp.Year, r.Timestamp.Month, r.Timestamp.Day, r.Timestamp.Hour, 0, 0))
-                    .OrderBy(g => g.Key)
+                "30s" => TimeSpan.FromSeconds(1),      // По секунде для 30 секунд
+                "1m" => TimeSpan.FromSeconds(1),       // По секунде для 1 минуты
+                "5m" => TimeSpan.FromSeconds(5),       // По 5 секунд для 5 минут
+                "15m" => TimeSpan.FromMinutes(1),      // По минуте для 15 минут
+                "30m" => TimeSpan.FromMinutes(1),      // По минуте для 30 минут
+                "1h" => TimeSpan.FromMinutes(1),      // По минуте для 1 часа
+                "6h" => TimeSpan.FromMinutes(5),      // По 5 минут для 6 часов
+                "24h" => TimeSpan.FromMinutes(15),     // По 15 минут для 24 часов
+                "7d" => TimeSpan.FromHours(1),        // По часу для 7 дней
+                "30d" => TimeSpan.FromHours(6),       // По 6 часов для 30 дней
+                _ => TimeSpan.FromMinutes(15)
             };
 
+            // Группируем readings по интервалам
+            var groupedReadings = readings
+                .GroupBy(r =>
+                {
+                    var timestamp = r.Timestamp;
+                    var ticks = timestamp.Ticks / interval.Ticks;
+                    return new DateTime(ticks * interval.Ticks, DateTimeKind.Utc);
+                })
+                .OrderBy(g => g.Key);
+
+            // Создаем точки данных только для интервалов, где есть данные
             foreach (var group in groupedReadings)
             {
                 var energyValues = new List<double>();

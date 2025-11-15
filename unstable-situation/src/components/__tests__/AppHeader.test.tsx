@@ -1,47 +1,23 @@
 import React from 'react';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import AppHeader from '../layout/AppHeader';
 
 describe('AppHeader Component', () => {
-  const mockOnToggleCollapse = jest.fn();
-
-  beforeEach(() => {
-    jest.clearAllMocks();
-  });
-
   it('should render header with title', () => {
-    render(<AppHeader collapsed={false} onToggleCollapse={mockOnToggleCollapse} />);
+    render(<AppHeader />);
     
-    expect(screen.getByText('IoT Sensor Monitoring System')).toBeInTheDocument();
-  });
-
-  it('should render collapse button', () => {
-    render(<AppHeader collapsed={false} onToggleCollapse={mockOnToggleCollapse} />);
-    
-    const collapseButton = screen.getByRole('button');
-    expect(collapseButton).toBeInTheDocument();
-  });
-
-  it('should call onToggleCollapse when button is clicked', () => {
-    render(<AppHeader collapsed={false} onToggleCollapse={mockOnToggleCollapse} />);
-    
-    const collapseButton = screen.getByRole('button');
-    fireEvent.click(collapseButton);
-    
-    expect(mockOnToggleCollapse).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('Monitoring System')).toBeInTheDocument();
   });
 
   it('should display connection status', () => {
-    render(<AppHeader collapsed={false} onToggleCollapse={mockOnToggleCollapse} />);
+    render(<AppHeader />);
     
     expect(screen.getByText('Connected')).toBeInTheDocument();
   });
 
   it('should have status indicator', () => {
-    const { container } = render(
-      <AppHeader collapsed={false} onToggleCollapse={mockOnToggleCollapse} />
-    );
+    const { container } = render(<AppHeader />);
     
     const statusIndicator = container.querySelector('.status-indicator');
     expect(statusIndicator).toBeInTheDocument();
