@@ -105,9 +105,9 @@ export interface SensorReadingsListProps {
 export interface GraphQLApiService {
   testGraphQLConnection(): Promise<SensorMetrics | null>;
   getMetrics(forceRefresh?: boolean): Promise<SensorMetrics>;
-  getSensorReadings(limit?: number, offset?: number, forceRefresh?: boolean): Promise<SensorReading[]>;
+  getSensorReadings(limit?: number, offset?: number, forceRefresh?: boolean, timeRange?: string): Promise<SensorReading[]>;
   getSensorReadingsByType(sensorType: string, limit?: number): Promise<SensorReading[]>;
-  getSensorReadingsByLocation(sensorName: string, limit?: number): Promise<SensorReading[]>;
+  getSensorReadingsByLocation(sensorName: string, limit?: number, timeRange?: string): Promise<SensorReading[]>;
   getAggregatedData(timeRange?: string, forceRefresh?: boolean): Promise<AggregatedDataPoint[]>;
   getProcessingStats(forceRefresh?: boolean): Promise<ProcessingStats>;
   getSensorReadingById(id: string): Promise<SensorReading>;

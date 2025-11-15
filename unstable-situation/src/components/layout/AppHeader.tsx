@@ -1,25 +1,13 @@
 import React from 'react';
-import { Layout, Button } from 'antd';
-import { MenuOutlined } from '@ant-design/icons';
+import { Layout } from 'antd';
 
 const { Header } = Layout;
 
-interface AppHeaderProps {
-  collapsed: boolean;
-  onToggleCollapse: () => void;
-}
-
-const AppHeader: React.FC<AppHeaderProps> = ({ collapsed, onToggleCollapse }) => {
+const AppHeader: React.FC = () => {
   return (
     <Header className="app-header">
       <div className="header-left">
-        <Button
-          type="text"
-          icon={<MenuOutlined />}
-          onClick={onToggleCollapse}
-          className="collapse-btn"
-        />
-        <h1 className="app-title">IoT Sensor Monitoring System</h1>
+        <h1 className="app-title">Monitoring System</h1>
       </div>
       
       <div className="header-right">

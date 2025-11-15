@@ -1,7 +1,5 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { ConfigProvider, Layout } from 'antd';
-import AppLayout from './components/layout/AppLayout';
-import AppMenu from './components/layout/AppMenu';
 import AppHeader from './components/layout/AppHeader';
 import Dashboard from './components/Dashboard';
 import { signalRService } from './services/signalRService';
@@ -10,9 +8,6 @@ import './App.css';
 const { Content } = Layout;
 
 const App: React.FC = () => {
-  const [collapsed, setCollapsed] = useState<boolean>(false);
-  const [selectedMenuKey, setSelectedMenuKey] = useState<string>('dashboard');
-
   // Initialize SignalR connection on app start
   useEffect(() => {
     const initializeSignalR = async () => {
@@ -34,21 +29,6 @@ const App: React.FC = () => {
     };
   }, []);
 
-  const renderContent = () => {
-    switch (selectedMenuKey) {
-      case 'dashboard':
-        return <Dashboard />;
-      case 'metrics':
-        return <div>Metrics Page (Coming Soon)</div>;
-      case 'sensors':
-        return <div>Sensors Page (Coming Soon)</div>;
-      case 'air-quality':
-        return <div>Air Quality Page (Coming Soon)</div>;
-      default:
-        return <Dashboard />;
-    }
-  };
-
   return (
     <ConfigProvider
       theme={{
@@ -59,14 +39,10 @@ const App: React.FC = () => {
       }}
     >
       <Layout style={{ minHeight: '100vh' }}>
-        <AppLayout collapsed={collapsed} onCollapse={setCollapsed}>
-          <AppMenu selectedKey={selectedMenuKey} onSelect={setSelectedMenuKey} />
-        </AppLayout>
-        
         <Layout>
-          <AppHeader collapsed={collapsed} onToggleCollapse={() => setCollapsed(!collapsed)} />
+          <AppHeader />
           <Content className="app-content">
-            {renderContent()}
+            <Dashboard />
           </Content>
         </Layout>
       </Layout>

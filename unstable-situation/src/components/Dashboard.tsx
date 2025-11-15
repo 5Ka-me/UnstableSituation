@@ -1,23 +1,17 @@
-import React, { useState, useEffect } from 'react';
-import { Spin, Alert, Tabs, Badge } from 'antd';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Spin, Alert, Badge } from 'antd';
 import { 
   LineChartOutlined,
-  BarChartOutlined,
-  PieChartOutlined,
   SyncOutlined
 } from '@ant-design/icons';
 import { graphqlApiService } from '../services/graphqlApiService';
 import { SensorReading, SensorMetrics, AggregatedDataPoint, ProcessingStats, TimeRange } from '../types';
+import { calculateMetricsFromReadings, aggregateReadingsByTime } from '../utils/metricsCalculator';
 import MetricsCards from './metrics/MetricsCards';
-import ProcessingStatsCards from './metrics/ProcessingStatsCards';
 import TimeSeriesCharts from './charts/TimeSeriesCharts';
-import DistributionCharts from './charts/DistributionCharts';
-import OverviewCharts from './charts/OverviewCharts';
 import DashboardControls from './controls/DashboardControls';
 import Notifications from './Notifications';
 import './Dashboard.css';
-
-const { TabPane } = Tabs;
 
 const Dashboard: React.FC = () => {
   const [metrics, setMetrics] = useState<SensorMetrics | null>(null);
@@ -27,10 +21,47 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [selectedTimeRange, setSelectedTimeRange] = useState<TimeRange>('5m');
   const [selectedLocation, setSelectedLocation] = useState<string>('all');
-  const [selectedSensorType, setSelectedSensorType] = useState<string>('all');
   const [processingStats, setProcessingStats] = useState<ProcessingStats | null>(null);
   const [isUpdating, setIsUpdating] = useState<boolean>(false);
   const [lastAggregatedDataTimestamp, setLastAggregatedDataTimestamp] = useState<string | null>(null);
+  const [allLocations, setAllLocations] = useState<string[]>([]);
+
+  // Вычисляем метрики из отфильтрованных данных
+  const filteredMetrics = useMemo(() => {
+    // Всегда вычисляем метрики из sensorReadings, которые уже отфильтрованы по времени
+    // Это гарантирует, что Total Readings учитывает и временной диапазон, и локацию
+    let readingsToUse = sensorReadings;
+    
+    // Если выбрана конкретная локация, дополнительно фильтруем по локации
+    if (selectedLocation !== 'all') {
+      readingsToUse = sensorReadings.filter(reading => reading.sensorName === selectedLocation);
+    }
+    
+    // Вычисляем метрики из отфильтрованных readings
+    if (readingsToUse.length > 0) {
+      return calculateMetricsFromReadings(readingsToUse);
+    }
+    
+    // Если нет данных, возвращаем пустые метрики
+    return {
+      totalReadings: 0,
+      averageEnergy: 0,
+      averageCO2: 0,
+      averageHumidity: 0,
+      motionDetectedCount: 0,
+      lastUpdated: new Date().toISOString()
+    };
+  }, [sensorReadings, selectedLocation]);
+
+  // Фильтруем агрегированные данные по локации
+  const filteredAggregatedData = useMemo(() => {
+    if (selectedLocation === 'all') {
+      return aggregatedData;
+    }
+    // Если выбрана конкретная локация, агрегируем данные из отфильтрованных readings
+    const filteredReadings = sensorReadings.filter(reading => reading.sensorName === selectedLocation);
+    return aggregateReadingsByTime(filteredReadings, selectedTimeRange);
+  }, [aggregatedData, selectedLocation, sensorReadings, selectedTimeRange]);
 
   useEffect(() => {
     let isMounted = true;
@@ -44,9 +75,15 @@ const Dashboard: React.FC = () => {
           // GraphQL API not available, falling back to mock data
         }
         
+        // Load readings based on location filter (load more for aggregation)
+        // Передаем timeRange для фильтрации по времени
+        const readingsPromise = selectedLocation === 'all' 
+          ? graphqlApiService.getSensorReadings(1000, 0, false, selectedTimeRange)
+          : graphqlApiService.getSensorReadingsByLocation(selectedLocation, 1000, selectedTimeRange);
+        
         const [metricsData, readingsData, aggregatedData, processingData] = await Promise.all([
           graphqlApiService.getMetrics(),
-          graphqlApiService.getSensorReadings(20),
+          readingsPromise,
           graphqlApiService.getAggregatedData(selectedTimeRange),
           graphqlApiService.getProcessingStats()
         ]);
@@ -74,7 +111,7 @@ const Dashboard: React.FC = () => {
     return () => {
       isMounted = false;
     };
-  }, [selectedTimeRange, selectedLocation, selectedSensorType]);
+  }, [selectedTimeRange, selectedLocation]);
 
   useEffect(() => {
     let isMounted = true;
@@ -82,9 +119,16 @@ const Dashboard: React.FC = () => {
     const updateData = async () => {
       try {
         setIsUpdating(true);
+        
+        // Load readings based on location filter (load more for aggregation)
+        // Передаем timeRange для фильтрации по времени
+        const readingsPromise = selectedLocation === 'all' 
+          ? graphqlApiService.getSensorReadings(1000, 0, true, selectedTimeRange)
+          : graphqlApiService.getSensorReadingsByLocation(selectedLocation, 1000, selectedTimeRange);
+        
         const [metricsData, readingsData, aggregatedData, processingData] = await Promise.all([
           graphqlApiService.getMetrics(true),
-          graphqlApiService.getSensorReadings(20, 0, true),
+          readingsPromise,
           graphqlApiService.getAggregatedData(selectedTimeRange, true),
           graphqlApiService.getProcessingStats(true)
         ]);
@@ -123,13 +167,46 @@ const Dashboard: React.FC = () => {
       clearInterval(interval);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedTimeRange]);
+  }, [selectedTimeRange, selectedLocation]);
+
+  // Load all locations once on mount
+  useEffect(() => {
+    const loadAllLocations = async () => {
+      try {
+        const allReadings = await graphqlApiService.getSensorReadings(100);
+        const uniqueLocations = [...new Set(allReadings.map(reading => reading.sensorName))];
+        setAllLocations(uniqueLocations);
+      } catch (err) {
+        // If failed, use locations from current readings
+        const uniqueLocations = [...new Set((sensorReadings || []).map(reading => reading.sensorName))];
+        setAllLocations(uniqueLocations);
+      }
+    };
+    
+    loadAllLocations();
+  }, []);
+
+  // Update locations when sensorReadings change (fallback)
+  useEffect(() => {
+    if (allLocations.length === 0 && sensorReadings.length > 0) {
+      const uniqueLocations = [...new Set(sensorReadings.map(reading => reading.sensorName))];
+      setAllLocations(uniqueLocations);
+    }
+  }, [sensorReadings, allLocations.length]);
 
   const handleTimeRangeChange = async (range: TimeRange) => {
     setSelectedTimeRange(range);
     try {
-      const data = await graphqlApiService.getAggregatedData(range, true);
-      setAggregatedData(data);
+      // При изменении временного диапазона загружаем новые агрегированные данные
+      // и обновляем readings для корректного отображения метрик
+      const [aggregatedData, readingsData] = await Promise.all([
+        graphqlApiService.getAggregatedData(range, true),
+        selectedLocation === 'all' 
+          ? graphqlApiService.getSensorReadings(1000, 0, true, range)
+          : graphqlApiService.getSensorReadingsByLocation(selectedLocation, 1000, range)
+      ]);
+      setAggregatedData(aggregatedData);
+      setSensorReadings(readingsData);
     } catch (err) {
       setError('Failed to load aggregated data: ' + (err as Error).message);
     }
@@ -160,72 +237,45 @@ const Dashboard: React.FC = () => {
     );
   }
 
-  const filteredReadings = (sensorReadings || []).filter(reading => {
-    const locationMatch = selectedLocation === 'all' || reading.sensorName === selectedLocation;
-    const typeMatch = selectedSensorType === 'all' || reading.sensorType === selectedSensorType;
-    return locationMatch && typeMatch;
-  });
-
-  const locations = [...new Set((sensorReadings || []).map(reading => reading.sensorName))];
-  const sensorTypes = [...new Set((sensorReadings || []).map(reading => reading.sensorType))];
+  const locations = allLocations.length > 0 ? allLocations : [...new Set((sensorReadings || []).map(reading => reading.sensorName))];
 
   return (
     <div className="dashboard">
       <div className="dashboard-header">
-        <div className="dashboard-title-section">
-          <h1>IoT Sensor Dashboard</h1>
-          {isUpdating && (
-            <Badge 
-              status="processing" 
-              text={
-                <span style={{ color: '#1890ff', fontSize: '14px' }}>
-                  <SyncOutlined spin /> Updating charts...
-                </span>
-              } 
-            />
-          )}
-        </div>
+        {isUpdating && (
+          <Badge 
+            status="processing" 
+            text={
+              <span style={{ color: '#1890ff', fontSize: '14px' }}>
+                <SyncOutlined spin /> Updating charts...
+              </span>
+            } 
+          />
+        )}
         <DashboardControls
           selectedLocation={selectedLocation}
-          selectedSensorType={selectedSensorType}
           selectedTimeRange={selectedTimeRange}
           locations={locations}
-          sensorTypes={sensorTypes}
           onLocationChange={setSelectedLocation}
-          onSensorTypeChange={setSelectedSensorType}
           onTimeRangeChange={handleTimeRangeChange}
         />
       </div>
 
       {/* Metrics Cards */}
-      <MetricsCards metrics={metrics} />
-
-      {/* Processing Stats Row */}
-      {processingStats && (
-        <ProcessingStatsCards processingStats={processingStats} />
-      )}
+      <MetricsCards metrics={filteredMetrics} />
 
       {/* Charts Section */}
-      <Tabs defaultActiveKey="1" className="charts-tabs">
-        <TabPane tab={<span><LineChartOutlined />Time Series</span>} key="1">
-          <TimeSeriesCharts 
-            data={aggregatedData} 
-            timeRange={selectedTimeRange}
-            key={`timeseries-${aggregatedData?.[0]?.timestamp || 'empty'}-${selectedTimeRange}`}
-          />
-        </TabPane>
-
-        <TabPane tab={<span><BarChartOutlined />Distribution</span>} key="2">
-          <DistributionCharts metrics={metrics} />
-        </TabPane>
-
-        <TabPane tab={<span><PieChartOutlined />Overview</span>} key="3">
-          <OverviewCharts 
-            metrics={metrics} 
-            readings={filteredReadings}
-          />
-        </TabPane>
-      </Tabs>
+      <div className="charts-section">
+        <div className="charts-header">
+          <LineChartOutlined style={{ marginRight: 8 }} />
+          <h2>Time Series</h2>
+        </div>
+        <TimeSeriesCharts 
+          data={filteredAggregatedData} 
+          timeRange={selectedTimeRange}
+          key={`timeseries-${filteredAggregatedData?.[0]?.timestamp || 'empty'}-${selectedTimeRange}-${selectedLocation}`}
+        />
+      </div>
 
       {/* Notifications Component */}
       <div className="dashboard-notifications">
@@ -233,7 +283,7 @@ const Dashboard: React.FC = () => {
       </div>
 
       <div className="dashboard-footer">
-        <p>Last updated: {metrics?.lastUpdated ? new Date(metrics.lastUpdated).toLocaleString() : 'Never'}</p>
+        <p>Last updated: {filteredMetrics?.lastUpdated ? new Date(filteredMetrics.lastUpdated).toLocaleString() : 'Never'}</p>
       </div>
     </div>
   );

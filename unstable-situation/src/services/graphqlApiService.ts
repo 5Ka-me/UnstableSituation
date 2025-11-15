@@ -58,12 +58,12 @@ class GraphQLApiServiceImpl implements GraphQLApiService {
   }
 
   // Получение показаний сенсоров
-  async getSensorReadings(limit: number = 50, offset: number = 0, forceRefresh: boolean = false): Promise<SensorReading[]> {
+  async getSensorReadings(limit: number = 50, offset: number = 0, forceRefresh: boolean = false, timeRange?: string): Promise<SensorReading[]> {
     try {
-      // console.log(`📡 Fetching sensor readings (limit: ${limit}, forceRefresh: ${forceRefresh})`);
+      // console.log(`📡 Fetching sensor readings (limit: ${limit}, forceRefresh: ${forceRefresh}, timeRange: ${timeRange})`);
       const result = await this.client.query<SensorReadingsResponse>({
         query: GET_SENSOR_READINGS,
-        variables: { limit, offset },
+        variables: { limit, timeRange },
         fetchPolicy: forceRefresh ? 'network-only' : 'cache-first'
       });
       
@@ -90,12 +90,12 @@ class GraphQLApiServiceImpl implements GraphQLApiService {
   }
 
   // Получение показаний по локации
-  async getSensorReadingsByLocation(sensorName: string, limit: number = 50): Promise<SensorReading[]> {
+  async getSensorReadingsByLocation(sensorName: string, limit: number = 50, timeRange?: string): Promise<SensorReading[]> {
     try {
       const result = await this.client.query<SensorReadingsByLocationResponse>({
         query: GET_SENSOR_READINGS_BY_LOCATION,
-        variables: { sensorName, limit },
-        fetchPolicy: 'cache-first'
+        variables: { sensorName, limit, timeRange },
+        fetchPolicy: 'network-only' // Всегда загружаем свежие данные при фильтрации
       });
       
       return result.data.sensorReadingsByLocation;
