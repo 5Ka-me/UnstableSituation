@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using System.Text.Json;
 using DataIngestor.Configuration;
@@ -88,6 +89,7 @@ public class RabbitMQService : IRabbitMQService
             throw new InvalidOperationException("RabbitMQ connection is not established");
         }
 
+        var stopwatch = Stopwatch.StartNew();
         try
         {
             _retryPolicy.ExecuteAsync(async () =>
@@ -116,6 +118,10 @@ public class RabbitMQService : IRabbitMQService
                         _logger.LogWarning("Publisher confirmation timeout for message");
                     }
 
+                    MetricsService.RabbitMQPublishCounter.Add(1);
+                    MetricsService.DataPublishedCounter.Add(data.Count);
+                    MetricsService.RabbitMQPublishDuration.Record(stopwatch.Elapsed.TotalSeconds);
+
                     var types = data.Select(d => d.Type).ToList();
                     _logger.LogInformation(
                         "Data published to exchange '{Exchange}' with routing key '{RoutingKey}'. Count: {Count}, Types: {Types}",
@@ -129,8 +135,14 @@ public class RabbitMQService : IRabbitMQService
         }
         catch (Exception ex)
         {
+            MetricsService.RabbitMQErrorCounter.Add(1);
+            MetricsService.RabbitMQPublishDuration.Record(stopwatch.Elapsed.TotalSeconds);
             _logger.LogError(ex, "Failed to publish message to queue after retries");
             throw;
+        }
+        finally
+        {
+            stopwatch.Stop();
         }
     }
 

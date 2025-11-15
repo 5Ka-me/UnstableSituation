@@ -3,7 +3,9 @@ use crate::config::Config;
 use crate::database::Database;
 use crate::rabbitmq::RabbitMQConsumer;
 use crate::models::{SensorData, SensorReadingInput};
+use crate::metrics::Metrics;
 use std::sync::Arc;
+use std::time::Instant;
 use tokio::sync::Mutex;
 use tracing::{error, info};
 
@@ -12,6 +14,7 @@ pub struct DataProcessor {
     database: Arc<Database>,
     consumer: Arc<Mutex<RabbitMQConsumer>>,
     stats: Arc<Mutex<ProcessingStats>>,
+    metrics: Arc<Metrics>,
 }
 
 #[derive(Debug, Default)]
@@ -22,7 +25,7 @@ struct ProcessingStats {
 }
 
 impl DataProcessor {
-    pub async fn new(config: Config) -> Result<Self> {
+    pub async fn new(config: Config, metrics: Arc<Metrics>) -> Result<Self> {
         info!("Initializing Data Processor...");
         
         // Initialize database
@@ -46,6 +49,7 @@ impl DataProcessor {
             database,
             consumer,
             stats,
+            metrics,
         })
     }
     
@@ -54,13 +58,15 @@ impl DataProcessor {
         
         let mut consumer = self.consumer.lock().await;
         
+        let metrics = self.metrics.clone();
         consumer.consume_messages(|sensor_data| {
             let database = self.database.clone();
             let stats = self.stats.clone();
+            let metrics = metrics.clone();
             let batch_size = self.config.processing.batch_size;
             
             async move {
-                Self::process_sensor_data(database, stats, sensor_data, batch_size).await
+                Self::process_sensor_data(database, stats, metrics, sensor_data, batch_size).await
             }
         }).await?;
         
@@ -70,10 +76,11 @@ impl DataProcessor {
     async fn process_sensor_data(
         database: Arc<Database>,
         stats: Arc<Mutex<ProcessingStats>>,
+        metrics: Arc<Metrics>,
         sensor_data: Vec<SensorData>,
         batch_size: usize,
     ) -> Result<()> {
-        let start_time = std::time::Instant::now();
+        let start_time = Instant::now();
         
         // Convert sensor data to database input format
         let mut sensor_reading_inputs = Vec::new();
@@ -91,21 +98,27 @@ impl DataProcessor {
         
         // Process in batches
         for chunk in sensor_reading_inputs.chunks(batch_size) {
+            let db_start = Instant::now();
             match database.insert_batch_sensor_readings(chunk.to_vec()).await {
                 Ok(_) => {
+                    metrics.database_insert_duration.observe(db_start.elapsed().as_secs_f64());
                     let mut stats = stats.lock().await;
                     stats.processed_messages += chunk.len() as u64;
                     stats.last_processed_at = Some(chrono::Utc::now());
+                    metrics.messages_processed.inc_by(chunk.len() as f64);
                 }
                 Err(e) => {
                     error!("Failed to insert batch: {}", e);
+                    metrics.database_insert_duration.observe(db_start.elapsed().as_secs_f64());
                     let mut stats = stats.lock().await;
                     stats.failed_messages += chunk.len() as u64;
+                    metrics.messages_failed.inc_by(chunk.len() as f64);
                 }
             }
         }
         
         let processing_time = start_time.elapsed();
+        metrics.processing_duration.observe(processing_time.as_secs_f64());
         let processing_rate = messages_count as f64 / processing_time.as_secs_f64();
         
         info!(

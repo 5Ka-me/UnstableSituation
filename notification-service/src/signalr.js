@@ -6,9 +6,8 @@ export async function connectToSignalR() {
   try {
     const signalRUrl = process.env.SIGNALR_URL || 'http://localhost:5284/notificationsHub';
 
-    // Call HubConnectionBuilder as a function so our Jest mock (which
-    // returns a builder object) is invoked correctly in tests.
-    connection = signalR.HubConnectionBuilder()
+    // HubConnectionBuilder is a class and must be called with 'new'
+    connection = new signalR.HubConnectionBuilder()
       .withUrl(signalRUrl, {
         withCredentials: false
       })
